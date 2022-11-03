@@ -11,13 +11,13 @@ Check the commands of [terraform CLI](https://www.terraform.io/cli/commands#swit
 terragrunt hclfmt
 
 # steps to create infrastructure
-terraform init
-terraform validate
+terragrunt init
+terragrunt validate
 terragrunt plan
 terragrunt apply
 
 # inspect
-terraform show
+terragrunt show
 terragrunt output
 
 # destroy the infrastructure
@@ -40,99 +40,6 @@ terragrunt apply --terragrunt-source ../../../modules//app
 cloud-nuke aws
 ```
 
-## terraform
-
-<details><summary> <b>Links</b> </summary>
-
-Check the [tutorial for AWS](https://learn.hashicorp.com/tutorials/terraform/aws-build?in=terraform/aws-get-started).
-To setup a VPC check this [Medium article](# https://medium.com/swlh/creating-an-aws-ecs-cluster-of-ec2-instances-with-terraform-85a10b5cfbe3
-).
-To setup workflow and environments check this [Medium article](https://blog.gruntwork.io/how-to-manage-terraform-state-28f5697e68fa).
-
-Check the [HCL](https://developer.hashicorp.com/terraform/language).
-
-</details>
-
-<details><summary> <b>Code</b> </summary>
-
-For reources tags, where `common_tags` is a map:
-
-```hcl
-resource "aws_resource_type" "resource_name" {
-  tags = merge(var.common_tags, {Name="..."})
-}
-```
-
-Add the lifecycle policy to create before detroying to avoid downtime.
-Be careful not to do it on unique resources that cannot be duplicated.
-
-```hcl
-resource "aws_resource_type" "resource_name" {
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-```
-
-Add the lifecycle policy to protect from destroying it:
-```hcl
-resource "aws_resource_type" "resource_name" {
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-```
-
-For backing up the state in an S3 bucket, insert those only in the running terraform file, which would not be in `modules`. 
-The backend name is usually `backend_name="terraform-state-backend"`.
-There is a different state for production and non-production environments.
-
-```hcl
-terraform {
-  required_providers {
-  aws = {
-    source  = "hashicorp/aws"
-    version = "~> 4.16"
-  }
-  }
-
-  required_version = ">= 1.2.0"
-
-  backend "s3" {
-  bucket         = "terraform-state-backend-storage"
-  key            = "global/s3/terraform.tfstate"
-  region         = "us-east-1"
-  dynamodb_table = "terraform-state-backend-locks"
-  encrypt        = true
-  }
-}
-
-provider "aws" {
-  region = var.region
-}
-```
-
-For running a bash script after the creation of the resource:
-```hcl
-resource "aws_resource_type" "resource_name" {
-  user_data = templatefile("user-data.sh", {
-    var_to_inject = "something"
-  })
-}
-```
-
-Inside `user-data.sh`:
-
-```shell
-#!/bin/bash
-
-...
-${db_address}
-...
-```
-
-</details>
-
 ## terragrunt
 
 #### dependencies
@@ -143,7 +50,9 @@ ${db_address}
 terragrunt graph-dependencies | dot -Tsvg > graph.svg
 ```
 
+#### architecture
 
+[Github example](https://github.com/gruntwork-io/terragrunt-infrastructure-live-example)
 
 ## env
 
@@ -154,10 +63,35 @@ AWS_REGION=***
 AWS_PROFILE=***
 AWS_ACCESS_KEY=***
 AWS_SECRET_KEY=***
-TF_VAR_AWS_REGION="${AWS_REGION}"
-TF_VAR_AWS_PROFILE="${AWS_PROFILE}"
-TF_VAR_AWS_ACCESS_KEY="${AWS_ACCESS_KEY}"
-TF_VAR_AWS_SECRET_KEY="${AWS_SECRET_KEY}"
+```
+
+#### production
+
+[Github example](https://github.com/gruntwork-io/terragrunt-infrastructure-live-example/tree/c269da5101210b0dd9927ad480b9f7fc73720642/prod/us-east-1)
+Create configuration files with locals, which are used by `live/terragrunt.hcl`:
+
+`live/account.hcl`:
+```hcl
+locals {
+  aws_profile    = "replaceme"
+  aws_account_id = "replaceme"
+  aws_role_name  = "replaceme"
+}
+```
+
+`live/region/region.hcl`:
+```hcl
+locals {
+  region = "us-east-1"
+}
+```
+
+`live/region/environment/environment.hcl`:
+```hcl
+locals {
+  environment_name = "test"
+  vpc_cidr_ipv4    = "10.0.0.0/16"
+}
 ```
 
 ## variables
@@ -187,67 +121,3 @@ cidrhost("192.168.0.0/16", -1)
 - 1.0.0.0/16 scraper test
 - 2.0.0.0/16 scraper production
 - 3.0.0.0/16 scraper non-production
-
-## test 
-
-  go test -timeout 30m -p 1 ./...
-
-  cloud-nuke aws
-  cloud-nuke aws --exclude-resource-type vpc
-
-### options
-
-```hcl
-terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
-		TerraformDir: "../",
-		// Variables to pass to our Terraform code using -var options
-		Vars: map[string]interface{}{
-			"region": "us-east-1",
-            ...
-		},
-		RetryableTerraformErrors: map[string]string{
-			"net/http: TLS handshake timeout": "Terraform bug",
-		},
-		MaxRetries: 3,
-		TimeBetweenRetries: 3*time.Second,
-	})
-```
-
-### local
-
-Use the `RunTestStage` functionnality to disable certain parts of the code, thus not needing to constantly destroy and redeploy the instances for the same test:
-
-```hcl
-defer func() {
-    if r := recover(); r != nil {
-        // destroy all resources if panic
-        terraform.Destroy(t, terraformOptions)
-    }
-    test_structure.RunTestStage(t, "cleanup_mongodb", func() {
-        terraform.Destroy(t, terraformOptions)
-    })
-}()
-test_structure.RunTestStage(t, "deploy_mongodb", func() {
-    terraform.InitAndApply(t, terraformOptions)
-})
-test_structure.RunTestStage(t, "validate_mongodb", func() {
-    s3bucketMongodbArn := terraform.Output(t, terraformOptions, "s3_bucket_mongodb_arn")
-    s3bucketpicturesArn := terraform.Output(t, terraformOptions, "s3_bucket_pictures_arn")
-    assert.Equal(t, fmt.Sprintf("arn:aws:s3:::%s", bucket_name_mongodb), s3bucketMongodbArn)
-    assert.Equal(t, fmt.Sprintf("arn:aws:s3:::%s", bucket_name_pictures), s3bucketpicturesArn)
-    err := testMongodbOperations()
-    assert.Equal(t, nil, err)
-})
-```
-
-If you need to disable one functionality:
-
-```shell
-SKIP_cleanup_mongodb=true
-```
-
-If you need to enable one functionality:
-
-```shell
-unset SKIP_cleanup_mongodb
-```

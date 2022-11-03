@@ -7,3 +7,8 @@
 
 # terragrunt
 .terragrunt*
+*_override.tf
+environment.yaml
+region.hcl
+account.hcl
+environment.hcl
