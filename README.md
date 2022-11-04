@@ -6,22 +6,24 @@ Open the project with the dev container.
 
 Check the commands of [terraform CLI](https://www.terraform.io/cli/commands#switching-working-directory-with-chdir).
 
+The `run-all` command will use the config for the child terragrunt file. Without it, the command is executed on the current working directory.
+
 ```shell
 # format
 terragrunt hclfmt
 
 # steps to create infrastructure
-terragrunt init
-terragrunt validate
-terragrunt plan
-terragrunt apply
+terragrunt run-all init
+terragrunt run-all validate
+terragrunt run-all plan
+terragrunt run-all apply
 
 # inspect
-terragrunt show
-terragrunt output
+terragrunt run-all show
+terragrunt run-all output
 
 # destroy the infrastructure
-terragrunt destroy
+terragrunt run-all destroy
 ```
 
 #### local
@@ -41,6 +43,8 @@ cloud-nuke aws
 ```
 
 ## terragrunt
+
+[Docs configuration](https://terragrunt.gruntwork.io/docs/reference/config-blocks-and-attributes/)
 
 #### dependencies
 
@@ -82,7 +86,7 @@ locals {
 `live/region/region.hcl`:
 ```hcl
 locals {
-  region = "us-east-1"
+  aws_region = "us-east-1"
 }
 ```
 
