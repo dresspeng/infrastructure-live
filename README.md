@@ -1,38 +1,50 @@
 # infrastructure
 
+## pipeline
+
+before terragrunt command:
+  ssh -T -oStrictHostKeyChecking=accept-new git@github.com || true
+
 ## run
 
 Open the project with the dev container.
 
 Check the commands of [terraform CLI](https://www.terraform.io/cli/commands#switching-working-directory-with-chdir).
 
-The `run-all` command will use the config for the child terragrunt file. Without it, the command is executed on the current working directory.
-
 ```shell
 # format
 terragrunt hclfmt
-
-# steps to create infrastructure
-terragrunt run-all init
-terragrunt run-all validate
-terragrunt run-all plan
-terragrunt run-all apply
-
-# inspect
-terragrunt run-all show
-terragrunt run-all output
-
-# destroy the infrastructure
-terragrunt run-all destroy
 ```
 
-#### local
+#### single
 
 ```shell
-terragrunt apply --terragrunt-source ../../../modules//app
+cd live/region/environment/<module>
+
+# steps to create infrastructure
+terragrunt init
+terragrunt validate
+terragrunt plan
+terragrunt apply
+
+# inspect
+terragrunt show
+terragrunt output
+
+# destroy the infrastructure
+terragrunt destroy
+
+# auto approve
+terragrunt <command> -auto-approve
 ```
 
-*(Note: the double slash (//) here too is intentional and required. Terragrunt downloads all the code in the folder before the double-slash into the temporary folder so that relative paths between modules work correctly. Terraform may display a “Terraform initialized in an empty directory” warning, but you can safely ignore it.)*
+#### all
+The `run-all` command will use the config for the child terragrunt file. Without it, the command is executed on the current working directory.
+
+```shell
+cd live/<region>/<environment>
+terragrunt run-all <command>
+```
 
 ## nuke
 
@@ -65,38 +77,29 @@ terragrunt graph-dependencies | dot -Tsvg > graph.svg
 ```
 AWS_REGION=***
 AWS_PROFILE=***
+AWS_ID=***
+AWS_ROLE=***
 AWS_ACCESS_KEY=***
 AWS_SECRET_KEY=***
+ENVIRONMENT_NAME=production
+GITHUB_TOKEN=***
+GH_ORG=KookaS
+GH_MODULES_REPO=infrastructure-modules
+GH_MODULES_BRANCH=master
 ```
+
+:warning: The `GITHUB_TOKEN` is a default name
+In [Github](https://github.com/settings/personal-access-tokens/new):
+  Actions: Read and write
+  Environments: Read and write
+  Metadata: Read-only
+  Secrets: Read and write
 
 #### production
 
 [Github example](https://github.com/gruntwork-io/terragrunt-infrastructure-live-example/tree/c269da5101210b0dd9927ad480b9f7fc73720642/prod/us-east-1)
-Create configuration files with locals, which are used by `live/terragrunt.hcl`:
 
-`live/account.hcl`:
-```hcl
-locals {
-  aws_profile    = "replaceme"
-  aws_account_id = "replaceme"
-  aws_role_name  = "replaceme"
-}
-```
-
-`live/region/region.hcl`:
-```hcl
-locals {
-  aws_region = "us-east-1"
-}
-```
-
-`live/region/environment/environment.hcl`:
-```hcl
-locals {
-  environment_name = "test"
-  vpc_cidr_ipv4    = "10.0.0.0/16"
-}
-```
+[Scraper](live/us-east-1/scraper/README.md)
 
 ## variables
 

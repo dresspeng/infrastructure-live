@@ -1,12 +1,11 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/ubuntu
 {
-	"name": "Ubuntu",
+	"name": "Alpine",
 	"build": {
-		"dockerfile": "Dockerfile",
-		// Update 'VARIANT' to pick an Ubuntu version: jammy / ubuntu-22.04, focal / ubuntu-20.04, bionic /ubuntu-18.04
-		// Use ubuntu-22.04 or ubuntu-18.04 on local arm64/Apple Silicon.
-		"args": { "VARIANT": "ubuntu-22.04" }
+		"dockerfile": "../Dockerfile",
+		"args": { "VARIANT": "mcr.microsoft.com/devcontainers/base:alpine-3.16", "RUNNER": "devcontainer" },
+		"target": "runner"
 	},
 
 	// Mount the docker daemon on the container, must run outside the container as well
@@ -21,24 +20,18 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postStartCommand": "aws configure set aws_access_key_id $AWS_ACCESS_KEY --profile $AWS_PROFILE && aws configure set --profile $AWS_PROFILE aws_secret_access_key $AWS_SECRET_KEY --profile $AWS_PROFILE && aws configure set region $AWS_REGION --profile $AWS_PROFILE && aws configure set output 'text' --profile $AWS_PROFILE && aws configure list",
+	"postStartCommand": "aws configure set aws_access_key_id $AWS_ACCESS_KEY --profile $AWS_PROFILE && aws configure set --profile $AWS_PROFILE aws_secret_access_key $AWS_SECRET_KEY --profile $AWS_PROFILE && aws configure set region $AWS_REGION --profile $AWS_PROFILE && aws configure set output 'text' --profile $AWS_PROFILE && aws configure list  && tflint --init",
 
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode",
-	"features": {
-		"terraform": {
-			"version": "latest",
-			"tflint": "latest",
-			"terragrunt": "latest"
-		},
-		"aws-cli": "latest",
-		"github-cli": "latest"
-	},
+	"features": {},
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"yzhang.markdown-all-in-one",
-				"shakram02.bash-beautify"
+				"shakram02.bash-beautify",
+				"hashicorp.terraform",
+				"bierner.markdown-emoji"
 			]
 		}
 	}
