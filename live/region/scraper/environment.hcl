@@ -18,12 +18,14 @@ locals {
   backend_desired_capacity_on_demand             = 0
   backend_minimum_scaling_step_size_on_demand    = 1
   backend_maximum_scaling_step_size_on_demand    = 3
+  backend_ami_ssm_architecture_on_demand         = "amazon-linux-2-arm64"
   backend_instance_type_spot                     = "t4g.nano"
   backend_min_size_spot                          = 0
   backend_max_size_spot                          = 10
   backend_desired_capacity_spot                  = 1
   backend_minimum_scaling_step_size_spot         = 1
   backend_maximum_scaling_step_size_spot         = 3
+  backend_ami_ssm_architecture_spot              = "amazon-linux-2-arm64"
   backend_ecs_task_definition_memory             = 512
   backend_ecs_task_definition_memory_reservation = 500
   backend_ecs_task_definition_cpu                = 512
