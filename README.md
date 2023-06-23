@@ -74,26 +74,23 @@ terragrunt graph-dependencies | dot -Tsvg > graph.svg
 
 #### devcontainer
 
-```
+```env
 AWS_REGION=***
 AWS_PROFILE=***
 AWS_ID=***
 AWS_ROLE=***
 AWS_ACCESS_KEY=***
 AWS_SECRET_KEY=***
-ENVIRONMENT_NAME=production
-GITHUB_TOKEN=***
-GH_ORG=KookaS
-GH_MODULES_REPO=infrastructure-modules
-GH_MODULES_BRANCH=master
-```
+ENVIRONMENT_NAME=local or prod
+GITHUB_TOKEN=***GH_TERRA_TOKEN***
 
-:warning: The `GITHUB_TOKEN` is a default name
-In [Github](https://github.com/settings/personal-access-tokens/new):
-  Actions: Read and write
-  Environments: Read and write
-  Metadata: Read-only
-  Secrets: Read and write
+# scraper
+FLICKR_PRIVATE_KEY=123
+FLICKR_PUBLIC_KEY=123
+UNSPLASH_PRIVATE_KEY=123
+UNSPLASH_PUBLIC_KEY=123
+PEXELS_PUBLIC_KEY=123
+```
 
 #### production
 
