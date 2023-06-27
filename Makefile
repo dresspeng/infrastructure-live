@@ -36,11 +36,23 @@ SCRAPER_BACKEND_BRANCH_NAME ?= master
 SCRAPER_FRONTEND_BRANCH_NAME ?= master
 SERVICE_UP ?= true
 .ONESHELL: set-scraper
-prepare-scraper:
+scraper-prepare:
 	make prepare-terragrunt
 	make prepare-scraper-backend BRANCH_NAME=${SCRAPER_BACKEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
 	# TODO: extract backend dns
 	# make prepare-scraper-frontend BRANCH_NAME=${SCRAPER_FRONTEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
+scraper-init:
+	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
+	terragrunt init --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+scraper-validate:
+	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
+	terragrunt validate --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+scraper-plan:
+	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
+	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl --no-color --out ${OUTPUT_FOLDER}/tf.plan
+scraper-apply:
+	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
+	terragrunt apply --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
 
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
@@ -211,11 +223,7 @@ prepare-scraper-backend:
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		COMMON_NAME=${COMMON_NAME} \
 		CLOUD_HOST=${CLOUD_HOST}
-
-	cd ${OUTPUT_FOLDER}
-	terragrunt init
-	terragrunt plan
-make prepare-scraper-backend-env:
+prepare-scraper-backend-env:
 	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
@@ -256,10 +264,6 @@ prepare-scraper-frontend:
 	make prepare-scraper-frontend-env \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-
-	cd ${OUTPUT_FOLDER}
-	terragrunt init
-	terragrunt plan
 prepare-scraper-frontend-env:
 	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
