@@ -1,10 +1,19 @@
 name: Plan
 
 on:
-  workflow_run:
-    workflows: [Repository]
-    types: [completed]
+  workflow_dispatch:
+    # inputs:
+    #   branch:
+    #     description: 'Name of the branch to use'
+    #     required: false
+    #     default: 'master'
+  push:
     branches-ignore: [dependabot/**]
+  # FIXME: not triggered for non defaut branch
+  # workflow_run:
+  #   workflows: [Repository]
+  #   types: [completed]
+  #   branches-ignore: [dependabot/**]
 
   env:
   AWS_REGION: ${{ vars.AWS_REGION }}
@@ -47,6 +56,7 @@ on:
           fi
       - name: Terragrunt Plan
         run: |
+          docker build -t this-image -f Dockerfile .
           docker run --name modules -v "/tmp:/tmp" -d -i -t \          
           -e AWS_REGION=${AWS_REGION} \
           -e AWS_PROFILE=${AWS_PROFILE} \
@@ -55,7 +65,7 @@ on:
           -e AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
           -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
           -e GITHUB_TOKEN=${GH_TERRA_TOKEN} \
-          ${ECR_REGISTRY_URI}/${ECR_REPOSITORY_NAME}:${ECR_IMAGE_TAG} \
+          this-image \
           /bin/bash -c "make scraper-prepare; make scraper-init; make scraper validate; make scraper plan OUTPUT_FOLDER="/tmp; terraform show -no-color ${OUTPUT_FOLDER}/tf.plan 2>&1 > /tmp/plan.txt"
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
