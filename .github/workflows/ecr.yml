@@ -56,7 +56,7 @@ jobs:
             jq --null-input \
               -c \
               '[
-                { "path":"Dockerfile" },
+                { "path":"Dockerfile" }
               ]'
           )
           echo "DOCKERFILES: $DOCKERFILES"
