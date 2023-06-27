@@ -49,7 +49,7 @@ scraper-validate:
 	terragrunt validate --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
 scraper-plan:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
-	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl --no-color --out ${OUTPUT_FOLDER}/tf.plan
+	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -out ${OUTPUT_FILE}
 scraper-apply:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
 	terragrunt apply --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl

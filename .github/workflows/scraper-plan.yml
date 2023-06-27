@@ -39,6 +39,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_KEY" > ~/.ssh/action.key
+          chmod 600 ~/.ssh/action.key
+          cat <<-EOF >> ~/.ssh/config
+            Host action
+            HostName $SSH_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/action.key
+            StrictHostKeyChecking no
+          EOF
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
       - name: Setup AWS CLI
         run: |
           aws --version
@@ -54,17 +70,19 @@ jobs:
           fi
       - name: Terragrunt Plan
         run: |
-          docker build -t this-image -f Dockerfile .
-          docker run --name modules -v "/tmp:/tmp" -d -i -t \          
-          -e AWS_REGION=${AWS_REGION} \
-          -e AWS_PROFILE=${AWS_PROFILE} \
-          -e AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
-          -e AWS_SECRET_KEY=${AWS_SECRET_KEY} \
-          -e AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
-          -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
-          -e GITHUB_TOKEN=${GH_TERRA_TOKEN} \
-          this-image \
-          /bin/bash -c "make scraper-prepare; make scraper-init; make scraper validate; make scraper plan OUTPUT_FOLDER="/tmp; terraform show -no-color ${OUTPUT_FOLDER}/tf.plan 2>&1 > /tmp/plan.txt"
+          sudo docker build -t this-image -f Dockerfile .
+          sudo docker run -it \
+            -v /tmp:/tmp \
+            -v ~/.ssh:~/.ssh \
+            --env AWS_REGION=${AWS_REGION} \
+            --env AWS_PROFILE=${AWS_PROFILE} \
+            --env AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+            --env AWS_SECRET_KEY=${AWS_SECRET_KEY} \
+            --env AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
+            --env ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
+            --env GITHUB_TOKEN=${GH_TERRA_TOKEN} \
+            this-image \
+            /bin/bash -c 'make scraper-prepare; make scraper-init; make scraper-validate; make scraper-plan OUTPUT_FOLDER=/tmp/tf.plan; terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt'
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
         with:
