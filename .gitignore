@@ -4,9 +4,8 @@
 .terraform*
 *.tfstate*
 *tfvars
+*override* 
 *.tf
 
 # terragrunt
 .terragrunt*
-region.hcl
-account.hcl

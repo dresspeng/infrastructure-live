@@ -1,149 +1,17 @@
-ARG VARIANT=alpine:3.16
-ARG RUNNER=workflow
-ARG ALPINE_VARIANT=alpine:3.16
-ARG GO_ALPINE_VARIANT=golang:1.19.0-alpine
-ARG PYTHON_ALPINE_VARIANT=python:3.10.5-alpine
+ARG AWS_REGION=us-west-1
+ARG AWS_ACCOUNT_ID=401582117818
+ARG AWS_ECR_REPOSITORY=kookas-infrastructure-modules-master-bin
+ARG VARIANT=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$AWS_ECR_REPOSITORY
 
-#-------------------------
-#       BUILDER
-#-------------------------
-FROM ${ALPINE_VARIANT} as builder-alpine
+FROM ${VARIANT}
 
-RUN apk update
-RUN apk add -q --no-cache git zip gzip tar dpkg make wget
-
-# rover
-RUN mkdir rover && cd rover && wget -q https://github.com/im2nguyen/rover/releases/download/v0.3.3/rover_0.3.3_linux_amd64.zip \
-    && unzip rover_0.3.3_linux_amd64.zip && mv rover_v0.3.3 /usr/local/bin/rover \
-    && chmod +rx /usr/local/bin/rover && cd .. && rm -R rover
-
-# terraform
-RUN wget -q https://releases.hashicorp.com/terraform/1.3.6/terraform_1.3.6_linux_amd64.zip \
-    && unzip terraform_1.3.6_linux_amd64.zip && mv terraform /usr/local/bin/terraform \
-    && chmod +rx /usr/local/bin/terraform && rm terraform_1.3.6_linux_amd64.zip
-
-# terragrunt
-RUN wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v0.42.4/terragrunt_linux_amd64 \
-    && mv terragrunt_linux_amd64 /usr/local/bin/terragrunt \
-    && chmod +rx /usr/local/bin/terragrunt
-
-# # cloud-nuke
-# RUN wget -q https://github.com/gruntwork-io/cloud-nuke/releases/download/v0.21.0/cloud-nuke_linux_amd64 \
-#     && mv cloud-nuke_linux_amd64 /usr/local/bin/cloud-nuke \
-#     && chmod +rx /usr/local/bin/cloud-nuke
-
-# # Pre-commit
-# RUN curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-# RUN sudo apt install pre-commit \
-#     && sudo npm install -g @commitlint/cli \
-#     pre-commit install --hook-type commit-msg
-
-#-------------------------
-#    PYTHON BUILDER
-#-------------------------
-FROM ${PYTHON_ALPINE_VARIANT} as builder-alpine-python
-
-ARG AWS_CLI_VERSION=2.9.0
-RUN apk add --no-cache git unzip groff build-base libffi-dev cmake
-RUN git clone --single-branch --depth 1 -b ${AWS_CLI_VERSION} https://github.com/aws/aws-cli.git
-
-WORKDIR aws-cli
-RUN python -m venv venv
-RUN . venv/bin/activate
-RUN scripts/installers/make-exe
-RUN unzip -q dist/awscli-exe.zip
-RUN aws/install --bin-dir /aws-cli-bin
-RUN /aws-cli-bin/aws --version
-
-# reduce image size: remove autocomplete and examples
-RUN rm -rf \
-    /usr/local/aws-cli/v2/current/dist/aws_completer \
-    /usr/local/aws-cli/v2/current/dist/awscli/data/ac.index \
-    /usr/local/aws-cli/v2/current/dist/awscli/examples
-RUN find /usr/local/aws-cli/v2/current/dist/awscli/data -name completions-1*.json -delete
-RUN find /usr/local/aws-cli/v2/current/dist/awscli/botocore/data -name examples-1.json -delete
-
-#-------------------------
-#    GOLANG BUILDER
-#-------------------------
-FROM ${GO_ALPINE_VARIANT} as builder-alpine-go
-
-RUN apk update
-RUN apk add -q --no-cache git zip gzip tar dpkg make wget
-
-# inframap
-RUN git clone https://github.com/cycloidio/inframap && cd inframap && go mod download && make build \
-    && mv inframap /usr/local/bin/inframap  \
-    && chmod +rx /usr/local/bin/inframap && cd .. && rm -R inframap
-
-#-------------------------
-#    BUILDER FINAL
-#-------------------------
-FROM ${VARIANT} as builder-final
-
-RUN apk update
-RUN apk add -q --no-cache make gcc libc-dev
-
-# rover
-RUN apk add -q --no-cache chromium
-COPY --from=builder-alpine /usr/local/bin/rover /usr/local/bin/rover
-RUN rover --version
-
-# inframap
-RUN apk add -q --no-cache graphviz
-COPY --from=builder-alpine-go /usr/local/bin/inframap /usr/local/bin/inframap
-RUN inframap version
-
-# aws cli
-COPY --from=builder-alpine-python /usr/local/aws-cli/ /usr/local/aws-cli/
-COPY --from=builder-alpine-python /aws-cli-bin/ /usr/local/bin/
-RUN aws --version
-
-# terraform
-COPY --from=builder-alpine /usr/local/bin/terraform /usr/local/bin/terraform
-RUN terraform --version
-
-# terratest
-COPY --from=builder-alpine /usr/local/bin/terragrunt /usr/local/bin/terragrunt
-RUN terragrunt --version
-
-# tflint
-COPY --from=ghcr.io/terraform-linters/tflint:v0.43.0 /usr/local/bin/tflint /usr/local/bin/tflint
-RUN tflint --version
-
-# github cli
-RUN apk add --no-cache -q github-cli
-
-#-------------------------
-#    RUNNER
-#-------------------------
-#                    --->   workflow   ---
-#                   /                      \
-#  builder-final ---                        ---> runner
-#                   \                      /
-#                    ---> devcontainer ---
-
-#-------------------------
-#    RUNNER WORKFLOW
-#-------------------------
-FROM builder-final AS runner-workflow
-
-ARG USER_NAME=user
-ARG USER_UID=1000
+ARG USERNAME=user
+ARG USER_UID=1001
 ARG USER_GID=$USER_UID
-RUN apk update && apk add --update sudo
-RUN addgroup --gid $USER_GID $USER_NAME \
-    && adduser --uid $USER_UID -D -G $USER_NAME $USER_NAME \
-    && echo $USER_NAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USER_NAME \
-    && chmod 0440 /etc/sudoers.d/$USER_NAME
-USER $USER_NAME
 
-#-------------------------
-#    RUNNER DEVCONTAINER
-#-------------------------
-FROM builder-final AS runner-devcontainer
+WORKDIR /home/$USERNAME
 
-#-------------------------
-#       RUNNER
-#-------------------------
-FROM runner-${RUNNER} AS runner
+COPY --chown=$USERNAME:$USER_GID . .
+
+RUN echo Date::; date; echo ;echo Files in home::; ls -l
+RUN echo Changes in the past 2h::; find ./ -not -path '*/.*' -type f -mmin -120 -mmin +1
