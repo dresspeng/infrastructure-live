@@ -1,13 +1,6 @@
 name: Plan
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Name of the branch to use'
-        required: false
-        default: 'master'
-  # FIXME: not triggered for non defaut branch
   workflow_run:
     workflows: [Repository]
     types: [completed]
