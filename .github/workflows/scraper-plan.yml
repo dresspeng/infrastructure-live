@@ -51,6 +51,7 @@ jobs:
             IdentityFile ~/.ssh/action.key
             StrictHostKeyChecking no
           EOF
+          ssh -T $SSH_HOST
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_KEY: ${{ secrets.SSH_KEY }}
@@ -82,7 +83,7 @@ jobs:
             --env ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
             --env GITHUB_TOKEN=${GH_TERRA_TOKEN} \
             this-image \
-            /bin/bash -c 'make scraper-prepare; make scraper-init; make scraper-validate; make scraper-plan OUTPUT_FOLDER=/tmp/tf.plan; terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt'
+            /bin/bash -c 'make scraper-prepare; make scraper-init; make scraper-validate; make scraper-plan OUTPUT_FILE=/tmp/tf.plan; terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt'
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
         with:
