@@ -22,18 +22,23 @@ locals {
 
   project_name = local.project_vars.locals.project_name
 
-  common_name = local.service_vars.locals.common_name
+  override_extension_name = local.service_vars.locals.override_extension_name
+  common_name             = local.service_vars.locals.common_name
   # organization_name = local.service_vars.locals.organization_name
   repository_name = local.service_vars.locals.repository_name
   branch_name     = local.service_vars.locals.branch_name
+  use_fargate     = local.service_vars.locals.use_fargate
+  pricing_names   = local.service_vars.locals.pricing_names
+  os              = local.service_vars.locals.os
+  architecture    = local.service_vars.locals.architecture
+  service_count   = local.service_vars.locals.service_count
 
   config_vars = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
 
-  spot             = local.microservice_vars.locals.spot
-  on_demand        = local.microservice_vars.locals.on_demand
-  ec2_microservice = local.microservice_vars.locals.ec2_x64_linux_complete
+  pricing_name_spot      = local.microservice_vars.locals.pricing_name_spot
+  pricing_name_on_demand = local.microservice_vars.locals.pricing_name_on_demand
   ec2_user_data = {
-    "${local.spot}" = {
+    "${local.pricing_name_spot}" = {
       user_data = <<EOT
             #!/bin/bash
             cat <<'EOF' >> /etc/ecs/ecs.config
@@ -41,7 +46,7 @@ locals {
             EOF
         EOT
     }
-    "${local.on_demand}" = {
+    "${local.pricing_name_on_demand}" = {
       user_data = <<EOT
             #!/bin/bash
             cat <<'EOF' >> /etc/ecs/ecs.config
@@ -51,26 +56,49 @@ locals {
     }
   }
 
-  ec2 = {
-    # local.spot = merge(local.ec2_microservice[local.spot], {user_data = format("%s\n%s", local.ec2_microservice[local.spot].user_data, local.ec2_user_data[local.spot])})
-    "${local.on_demand}" = merge(local.ec2_microservice[local.on_demand], {
-      user_data = format("%s\n%s", local.ec2_microservice[local.on_demand].user_data, local.ec2_user_data[local.on_demand].user_data)
-    })
+  ec2_microservice = local.microservice_vars.locals.ec2
+  ec2 = { for pricing_name in local.pricing_names :
+    pricing_name => merge(
+      local.ec2_microservice[pricing_name],
+      {
+        user_data            = format("%s\n%s", local.ec2_microservice[pricing_name].user_data, local.ec2_user_data[pricing_name].user_data)
+        instance_type        = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].name
+        ami_ssm_architecture = local.microservice_vars.locals.ec2_amis["${local.service_vars.locals.os}_${local.service_vars.locals.os_version}"][local.service_vars.locals.architecture].ami_ssm_architecture
+        asg = merge(local.ec2_microservice[pricing_name].asg, {
+          min_size     = local.service_vars.locals.instance_min_count
+          desired_size = local.service_vars.locals.instance_desired_count
+          max_size     = local.service_vars.locals.instance_max_count
+        })
+      }
+    )
+    if !local.use_fargate
   }
-  # fargate = local.microservice_vars.locals.fargate_x64_linux_complete
 
 
+  fargate_microservice = local.microservice_vars.locals.fargate
+  fargate = merge(
+    local.fargate_microservice,
+    {
+      os           = local.microservice_vars.locals.fargate_amis[local.service_vars.locals.os][local.service_vars.locals.architecture].os
+      architecture = local.microservice_vars.locals.fargate_amis[local.service_vars.locals.os][local.service_vars.locals.architecture].architecture
+      capacity_provider = { for pricing_name in local.pricing_names :
+        pricing_name => local.fargate_microservice.capacity_provider[pricing_name]
+        if local.use_fargate
+      }
+  })
 
-  # ecs_default = local.microservice_vars.locals.ecs_fargate
-  ecs_default = local.microservice_vars.locals.ecs_ec2
-
-  env_key                 = "${local.branch_name}.env"
-  task_definition_default = local.microservice_vars.locals.task_definition_ec2
-  bucket_env = {
-    name      = "${local.common_name}-env"
-    file_key  = local.env_key
-    file_path = "override.env"
+  task_definition = local.use_fargate ? {
+    cpu                = local.microservice_vars.locals.fargate_instances[local.service_vars.locals.fargate_instance_key].cpu
+    memory             = local.microservice_vars.locals.fargate_instances[local.service_vars.locals.fargate_instance_key].memory
+    memory_reservation = null
+    } : {
+    cpu                = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].cpu
+    memory             = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].memory_allowed - local.microservice_vars.locals.ecs_reserved_memory
+    memory_reservation = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].memory_allowed - local.microservice_vars.locals.ecs_reserved_memory
   }
+
+  env_key         = "${local.branch_name}.env"
+  env_bucket_name = "${local.common_name}-env"
 }
 
 terraform {
@@ -86,33 +114,58 @@ inputs = {
     local.service_vars.locals.common_tags,
   )
 
-  vpc = {
-    name       = local.common_name
-    cidr_ipv4  = "1.0.0.0/16"
-    enable_nat = false
-    tier       = "Public"
-  }
+  microservice = {
+    vpc = {
+      name       = local.common_name
+      cidr_ipv4  = "1.0.0.0/16"
+      enable_nat = false
+      tier       = "Public"
+    }
 
-  ecs = merge(local.ecs_default, {
-    traffic = {
-      listener_port             = 80
-      listener_protocol         = "http"
-      listener_protocol_version = "http"
-      target_port               = local.config_vars.port
-      target_protocol           = "http"
-      target_protocol_version   = "http"
-      health_check_path         = local.config_vars.healthCheckPath
+    bucket_env = {
+      name          = local.env_bucket_name
+      file_key      = local.env_key
+      file_path     = "${local.override_extension_name}.env"
+      force_destroy = false
+      versioning    = true
     }
-    },
-    {
-      task_definition = merge(local.task_definition_default, {
-        env_bucket_name      = "${local.common_name}-env",
-        env_file_name        = local.env_key
-        repository_name      = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}")
-        repository_image_tag = "latest"
-      })
-    }
-  )
+
+    ecs = merge(local.microservice_vars.locals.ecs, {
+      traffic = {
+        listener_port             = 80
+        listener_protocol         = "http"
+        listener_protocol_version = "http"
+        target_port               = local.config_vars.port
+        target_protocol           = "http"
+        target_protocol_version   = "http"
+        health_check_path         = local.config_vars.healthCheckPath
+      }
+      service = merge(
+        local.microservice_vars.locals.ecs.service,
+        {
+          use_fargate        = local.use_fargate
+          task_desired_count = local.service_count
+          deployment_circuit_breaker = local.use_fargate ? null : {
+            enable   = true
+            rollback = false
+          }
+        }
+      )
+      task_definition = merge(
+        local.microservice_vars.locals.ecs.task_definition,
+        local.task_definition,
+        {
+          env_bucket_name      = local.env_bucket_name,
+          env_file_name        = local.env_key
+          repository_name      = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}")
+          repository_image_tag = "latest"
+        }
+      )
+      ec2     = local.ec2
+      fargate = local.fargate
+      },
+    )
+  }
 
   dynamodb_tables = [for table in local.config_vars.dynamodb : {
     name                 = table.name

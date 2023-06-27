@@ -19,7 +19,6 @@ PATH_ABS_AWS=${PATH_ABS_ROOT}/${PATH_REL_AWS}
 OVERRIDE_EXTENSION=override
 export OVERRIDE_EXTENSION
 export AWS_REGION AWS_PROFILE AWS_ACCOUNT_ID AWS_ACCESS_KEY AWS_SECRET_KEY ENVIRONMENT_NAME
-export GIT_NAME ORGANIZATION_NAME PROJECT_NAME SERVICE_NAME
 
 .SILENT:	# silent all commands below
 # https://www.gnu.org/software/make/manual/html_node/Options-Summary.html
@@ -35,11 +34,13 @@ fmt: ## Format all files
 
 SCRAPER_BACKEND_BRANCH_NAME ?= master
 SCRAPER_FRONTEND_BRANCH_NAME ?= master
+SERVICE_UP ?= true
 .ONESHELL: set-scraper
 prepare-scraper:
 	make prepare-terragrunt
-	make prepare-scraper-backend BRANCH_NAME=${SCRAPER_BACKEND_BRANCH_NAME}
-	make prepare-scraper-frontend BRANCH_NAME=${SCRAPER_FRONTEND_BRANCH_NAME}
+	make prepare-scraper-backend BRANCH_NAME=${SCRAPER_BACKEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
+	# TODO: extract backend dns
+	# make prepare-scraper-frontend BRANCH_NAME=${SCRAPER_FRONTEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
 
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
@@ -85,39 +86,100 @@ prepare-aws-region:
 	}
 	EOF
 .ONESHELL: prepare-module-microservice-scraper-backend
+USE_FARGATE ?= false
+SERVICE_COUNT ?= 1
+INSTANCE_MIN_COUNT ?= 0
+INSTANCE_DESIRED_COUNT ?= 1
+INSTANCE_MAX_COUNT ?= 1
+PRICING_NAMES ?= ["on-demand"]
+EC2_INSTANCE_KEY ?= "t3_small"
+FARGATE_INSTANCE_KEY ?= "set_1"
+OS ?= "linux"
+OS_VERSION ?= "2023"
+ARCHITECTURE ?= "x64"
 prepare-microservice:
-	cat <<-EOF > ${OUTPUT_FOLDER}/service_${OVERRIDE_EXTENSION}.hcl
+	$(eval FILE=${OUTPUT_FOLDER}/service_${OVERRIDE_EXTENSION}.hcl)
+	cat <<-EOF > ${FILE}
 	locals {
-		common_name 		= "${COMMON_NAME}"
+		override_extension_name	= "${OVERRIDE_EXTENSION}"
+		common_name 			= "${COMMON_NAME}"
 		# organization_name 	= "${ORGANIZATION_NAME}"
-		repository_name 	= "${PROJECT_NAME}-${SERVICE_NAME}"
-		branch_name 		= "${BRANCH_NAME}"
+		repository_name 		= "${PROJECT_NAME}-${SERVICE_NAME}"
+		branch_name 			= "${BRANCH_NAME}"
 		common_tags = {
 			"Git Microservice" 	= "${GIT_NAME}/${ORGANIZATION_NAME}/${PROJECT_NAME}-${SERVICE_NAME}@${BRANCH_NAME}"
-			"Service" = "${SERVICE_NAME}"
+			"Service" 			= "${SERVICE_NAME}"
 		}
-	}
+		use_fargate 	= ${USE_FARGATE}
+		pricing_names 	= ${PRICING_NAMES}
+		os 				= ${OS}
+		os_version 		= ${OS_VERSION}
+		architecture 	= ${ARCHITECTURE}
 	EOF
+
+	if [[ ${USE_FARGATE} == true ]]; then
+		# FARGATE
+		cat <<-EOF >> ${FILE}
+			fargate_instance_key = ${FARGATE_INSTANCE_KEY}
+		EOF
+		if [[ ${SERVICE_UP} == true ]]; then
+			cat <<-EOF >> ${FILE}
+				service_count = ${SERVICE_COUNT}
+			EOF
+		else
+			cat <<-EOF >> ${FILE}
+				service_count = 0
+			EOF
+		fi
+	else
+		# EC2
+		cat <<-EOF >> ${FILE}
+			ec2_instance_key = ${EC2_INSTANCE_KEY}
+		EOF
+		if [[ ${SERVICE_UP} == true ]]; then
+			cat <<-EOF >> ${FILE}
+				service_count 			= 1
+				instance_min_count 		= ${INSTANCE_MIN_COUNT}
+				instance_desired_count 	= ${INSTANCE_DESIRED_COUNT}
+				instance_max_count 		= ${INSTANCE_MAX_COUNT}
+			EOF
+		else
+			cat <<-EOF >> ${FILE}
+				service_count 			= 0
+				instance_min_count 		= 0
+				instance_desired_count 	= 0
+				instance_max_count 		= 0
+			EOF
+		fi
+	fi
+
+	echo "}" >> ${FILE}
 
 .ONESHELL: gh-load-folder
 gh-load-folder:
+	echo GET Github folder:: ${REPOSITORY_PATH}
 	$(eval res=$(shell curl -L \
 		-H "Accept: application/vnd.github+json" \
 		-H "Authorization: Bearer ${GITHUB_TOKEN}" \
 		-H "X-GitHub-Api-Version: 2022-11-28" \
-		https://api.github.com/repos/${GH_ORG}/${GH_REPO}/contents/${GH_PATH}?ref=${GH_BRANCH} | jq -c '.[] | .path'))
-	for file in ${res}; do \
-		make gh-load-file OUTPUT_FOLDER=${OUTPUT_FOLDER} GH_PATH="$$file"; \
+		https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_PATH}?ref=${BRANCH_NAME} | jq -c '.[] | .path'))
+	for file in ${res}; do
+		echo GET Github file:: "$$file"; \
+		make gh-load-file \
+			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+			REPOSITORY_PATH="$$file" \
+			ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+			REPOSITORY_NAME=${REPOSITORY_NAME} \
+			BRANCH_NAME=${BRANCH_NAME}; \
     done
 gh-load-file:
-	curl -L -o ${OUTPUT_FOLDER}/$(shell basename ${GH_PATH} | cut -d. -f1)_${OVERRIDE_EXTENSION}$(shell [[ "${GH_PATH}" = *.* ]] && echo .$(shell basename ${GH_PATH} | cut -d. -f2) || echo '') \
+	curl -L -o ${OUTPUT_FOLDER}/$(shell basename ${REPOSITORY_PATH} | cut -d. -f1)_${OVERRIDE_EXTENSION}$(shell [[ "${REPOSITORY_PATH}" = *.* ]] && echo .$(shell basename ${REPOSITORY_PATH} | cut -d. -f2) || echo '') \
 			-H "Accept: application/vnd.github.v3.raw" \
 			-H "Authorization: Bearer ${GITHUB_TOKEN}" \
 			-H "X-GitHub-Api-Version: 2022-11-28" \
-			https://api.github.com/repos/${GH_ORG}/${GH_REPO}/contents/${GH_PATH}?ref=${GH_BRANCH}
+			https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_PATH}?ref=${BRANCH_NAME}
 
-export FLICKR_PRIVATE_KEY FLICKR_PUBLIC_KEY UNSPLASH_PRIVATE_KEY PEXELS_PUBLIC_KEY
-export OUTPUT_FOLDER COMMON_NAME FLICKR_PRIVATE_KEY FLICKR_PUBLIC_KEY UNSPLASH_PRIVATE_KEY UNSPLASH_PUBLIC_KEY PEXELS_PUBLIC_KEY
+export FLICKR_PRIVATE_KEY FLICKR_PUBLIC_KEY UNSPLASH_PRIVATE_KEY UNSPLASH_PUBLIC_KEY PEXELS_PUBLIC_KEY
 .ONESHELL: prepare-scraper-backend
 BRANCH_NAME ?= master
 prepare-scraper-backend:
@@ -125,32 +187,46 @@ prepare-scraper-backend:
 	$(eval ORGANIZATION_NAME=KookaS)
 	$(eval PROJECT_NAME=scraper)
 	$(eval SERVICE_NAME=backend)
+	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
 	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
-	$(eval COMMON_NAME=$(shell echo ${ORGANIZATION_NAME}-${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
+	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
+	$(eval CLOUD_HOST=aws)
 	make prepare-microservice \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		COMMON_NAME=${COMMON_NAME}
+		COMMON_NAME=${COMMON_NAME} \
+		GIT_NAME=${GIT_NAME} \
+		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+		PROJECT_NAME=${PROJECT_NAME} \
+		SERVICE_NAME=${SERVICE_NAME} \
+		REPOSITORY_NAME=${REPOSITORY_NAME} \
+		BRANCH_NAME=${BRANCH_NAME} \
+		SERVICE_UP=${SERVICE_UP}
 	make gh-load-folder \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		GH_ORG=${ORGANIZATION_NAME} \
-		GH_REPO=${PROJECT_NAME}-${SERVICE_NAME} \
-		GH_BRANCH=${BRANCH_NAME} \
-		GH_PATH=config
-	make prepare-scraper-backend-env
+		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+		REPOSITORY_NAME=${REPOSITORY_NAME} \
+		BRANCH_NAME=${BRANCH_NAME} \
+		REPOSITORY_PATH=config
+	make prepare-scraper-backend-env \
+		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		COMMON_NAME=${COMMON_NAME} \
+		CLOUD_HOST=${CLOUD_HOST}
+
 	cd ${OUTPUT_FOLDER}
 	terragrunt init
+	terragrunt plan
 make prepare-scraper-backend-env:
 	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		COMMON_NAME=${COMMON_NAME} \
-		CLOUD_HOST=aws \
+		CLOUD_HOST=${CLOUD_HOST} \
 		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
 		FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
 		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
 		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
 		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
-export OUTPUT_FOLDER NEXT_PUBLIC_API_URL
+
 .ONESHELL: prepare-scraper-frontend
 BRANCH_NAME ?= master
 prepare-scraper-frontend:
@@ -158,18 +234,32 @@ prepare-scraper-frontend:
 	$(eval ORGANIZATION_NAME=KookaS)
 	$(eval PROJECT_NAME=scraper)
 	$(eval SERVICE_NAME=frontend)
+	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
 	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
-	$(eval COMMON_NAME=$(shell echo ${ORGANIZATION_NAME}-${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
+	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
 	make prepare-microservice \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		COMMON_NAME=${COMMON_NAME}
+		COMMON_NAME=${COMMON_NAME} \
+		GIT_NAME=${GIT_NAME} \
+		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+		PROJECT_NAME=${PROJECT_NAME} \
+		SERVICE_NAME=${SERVICE_NAME} \
+		REPOSITORY_NAME=${REPOSITORY_NAME} \
+		BRANCH_NAME=${BRANCH_NAME} \
+		SERVICE_UP=${SERVICE_UP}
 	make gh-load-folder \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		GH_ORG=${ORGANIZATION_NAME} \
-		GH_REPO=${PROJECT_NAME}-${SERVICE_NAME} \
-		GH_BRANCH=${BRANCH_NAME} \
-		GH_PATH=config
-	make prepare-scraper-frontend-env 
+		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+		REPOSITORY_NAME=${REPOSITORY_NAME} \
+		BRANCH_NAME=${BRANCH_NAME} \
+		REPOSITORY_PATH=config
+	make prepare-scraper-frontend-env \
+		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+	cd ${OUTPUT_FOLDER}
+	terragrunt init
+	terragrunt plan
 prepare-scraper-frontend-env:
 	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
