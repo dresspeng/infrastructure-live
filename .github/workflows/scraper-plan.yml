@@ -2,7 +2,6 @@ name: Plan
 
 on:
   workflow_dispatch:
-    branches-ignore: [dependabot/**]
     inputs:
       branch:
         description: 'The branch to build'
@@ -13,13 +12,8 @@ on:
         default: KookaS
   push:
     branches-ignore: [dependabot/**]
-  # will also run if push and create happen together
-  # create:
-  #   branches-ignore: [dependabot/**]
-  delete:
-    branches-ignore: [dependabot/**]
 
-  env:
+env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   AWS_PROFILE: ${{ vars.AWS_PROFILE }}
   AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
@@ -37,7 +31,7 @@ on:
   UNSPLASH_PUBLIC_KEY: 123
   PEXELS_PUBLIC_KEY: 123
 
-  jobs:
+jobs:
   ecr-publish:
     name: ECR publish steps
     runs-on: ubuntu-latest

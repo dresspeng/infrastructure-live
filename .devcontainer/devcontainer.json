@@ -20,7 +20,8 @@
 				"shakram02.bash-beautify",
 				"hashicorp.terraform",
 				"bierner.markdown-emoji",
-				"ms-vscode.makefile-tools"
+				"ms-vscode.makefile-tools",
+				"github.vscode-github-actions"
 			]
 		}
 	}
