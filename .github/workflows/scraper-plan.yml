@@ -23,6 +23,13 @@ on:
   ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
   ECR_REPOSITORY_NAME: kookas-infrastructure-live-master
   ECR_IMAGE_TAG: latest
+  GH_TERRA_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
+  ENVIRONMENT_NAME: prod
+  FLICKR_PRIVATE_KEY: 123
+  FLICKR_PUBLIC_KEY: 123
+  UNSPLASH_PRIVATE_KEY: 123
+  UNSPLASH_PUBLIC_KEY: 123
+  PEXELS_PUBLIC_KEY: 123
 
   jobs:
   ecr-publish:
@@ -47,7 +54,16 @@ on:
           fi
       - name: Terragrunt Plan
         run: |
-          docker run --name modules -v "/tmp:/tmp" -d -i -t ${ECR_REGISTRY_URI}/${ECR_REPOSITORY_NAME}:${ECR_IMAGE_TAG} /bin/bash -c "make scraper-prepare; make scraper-init; make scraper validate; make scraper plan OUTPUT_FOLDER="/tmp; terraform show -no-color ${OUTPUT_FOLDER}/tf.plan 2>&1 > /tmp/plan.txt"
+          docker run --name modules -v "/tmp:/tmp" -d -i -t \          
+          -e AWS_REGION=${AWS_REGION} \
+          -e AWS_PROFILE=${AWS_PROFILE} \
+          -e AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+          -e AWS_SECRET_KEY=${AWS_SECRET_KEY} \
+          -e AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
+          -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
+          -e GITHUB_TOKEN=${GH_TERRA_TOKEN} \
+          ${ECR_REGISTRY_URI}/${ECR_REPOSITORY_NAME}:${ECR_IMAGE_TAG} \
+          /bin/bash -c "make scraper-prepare; make scraper-init; make scraper validate; make scraper plan OUTPUT_FOLDER="/tmp; terraform show -no-color ${OUTPUT_FOLDER}/tf.plan 2>&1 > /tmp/plan.txt"
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
         with:
