@@ -2,18 +2,22 @@ name: Plan
 
 on:
   workflow_dispatch:
-    # inputs:
-    #   branch:
-    #     description: 'Name of the branch to use'
-    #     required: false
-    #     default: 'master'
+    branches-ignore: [dependabot/**]
+    inputs:
+      branch:
+        description: 'The branch to build'
+        required: true
+      environment:
+        description: 'The environment to deploy to'
+        required: false
+        default: KookaS
   push:
     branches-ignore: [dependabot/**]
-  # FIXME: not triggered for non defaut branch
-  # workflow_run:
-  #   workflows: [Repository]
-  #   types: [completed]
+  # will also run if push and create happen together
+  # create:
   #   branches-ignore: [dependabot/**]
+  delete:
+    branches-ignore: [dependabot/**]
 
   env:
   AWS_REGION: ${{ vars.AWS_REGION }}
