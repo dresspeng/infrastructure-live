@@ -120,7 +120,7 @@ jobs:
 
       - name: Terraform - Show Plan in PR
         uses: actions/github-script@v6
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
         with:
           github-token: ${{ secrets.GH_TERRA_TOKEN }}
           script: |
