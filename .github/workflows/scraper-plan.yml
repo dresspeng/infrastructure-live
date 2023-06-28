@@ -12,6 +12,8 @@ on:
         default: KookaS
   push:
     branches-ignore: [dependabot/**]
+  pull_request:
+    branches: [master]
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
@@ -120,7 +122,7 @@ jobs:
 
       - name: Terraform - Show Plan in PR
         uses: actions/github-script@v6
-        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        if: github.event_name == 'pull_request'
         with:
           github-token: ${{ secrets.GH_TERRA_TOKEN }}
           script: |
@@ -154,8 +156,8 @@ jobs:
 
             *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ github.workspace }}\`, Workflow: \`${{ github.workflow }}\`*`;
               
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            github.rest.pulls.createComment({
+              pull_number: context.pull.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: output
