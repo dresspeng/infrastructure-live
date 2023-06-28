@@ -146,9 +146,11 @@ jobs:
             <details><summary>Show Plan</summary>
             
             \`\`\`\n
+            ${plan}
             \`\`\`
             
             </details>
+            ${truncated_message}
 
             *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ github.workspace }}\`, Workflow: \`${{ github.workflow }}\`*`;
               
@@ -156,4 +158,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              b
+              body: output
+            })
