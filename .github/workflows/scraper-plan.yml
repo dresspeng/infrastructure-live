@@ -10,6 +10,13 @@ on:
         description: 'The environment to deploy to'
         required: false
         default: KookaS
+      event:
+        type: choice
+        description: 'Type of event'     
+        required: true
+        options:
+        - up
+        - down
   push:
     branches-ignore: [dependabot/**]
   pull_request:
@@ -101,7 +108,11 @@ jobs:
         env: 
           GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
         run: |
-          make scraper-prepare
+          if [[ "${{ inputs.event }}" == "down" ]]; then
+            make scraper-prepare SERVICE_UP=false
+          else
+            make scraper-prepare SERVICE_UP=true
+          fi
 
       - name: Terragrunt init
         id: init
@@ -162,3 +173,11 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
+
+      - name: Terragrunt validate
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          make scraper-apply
+          if [[ "${{ inputs.event }}" == "down" ]]; then
+            scraper-remove-lb
+          fi
