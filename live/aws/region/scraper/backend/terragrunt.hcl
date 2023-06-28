@@ -125,7 +125,7 @@ inputs = {
     bucket_env = {
       name          = local.env_bucket_name
       file_key      = local.env_key
-      file_path     = "${local.override_extension_name}.env"
+      file_path     = "${path_relative_to_include()}/${local.override_extension_name}.env"
       force_destroy = false
       versioning    = true
     }

@@ -32,6 +32,20 @@ help:
 fmt: ## Format all files
 	terragrunt hclfmt
 
+clean:
+	make nuke-region
+	make nuke-global
+	make clean-local
+clean-local: ## Clean the local files and folders
+	echo "Delete state backup files..."; for folderPath in $(shell find . -type f -name ".terraform.lock.hcl"); do echo $$folderPath; rm -Rf $$folderPath; done; \
+	echo "Delete override files..."; for filePath in $(shell find . -type f -name "*override*"); do echo $$filePath; rm $$filePath; done; \
+	echo "Delete temp folder..."; for folderPath in $(shell find . -type d -name ".terragrunt-cache"); do echo $$folderPath; rm -Rf $$folderPath; done;
+
+nuke-region:
+	cloud-nuke aws --region ${AWS_REGION} --config .gruntwork/cloud-nuke/config.yaml --force;
+nuke-global:
+	cloud-nuke aws --region global --config .gruntwork/cloud-nuke/config.yaml --force;
+
 SCRAPER_BACKEND_BRANCH_NAME ?= master
 SCRAPER_FRONTEND_BRANCH_NAME ?= master
 SERVICE_UP ?= true
@@ -52,7 +66,10 @@ scraper-plan:
 	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -out ${OUTPUT_FILE}
 scraper-apply:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
-	terragrunt apply --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+	terragrunt apply --terragrunt-non-interactive  -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+scraper-remove-lb:
+	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
+	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs.module.alb
 
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment

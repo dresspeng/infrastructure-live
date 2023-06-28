@@ -96,7 +96,6 @@ jobs:
         run: |
           make scraper-prepare
           make scraper-init
-          cat live/aws/region/scraper/backend/provider_override.tf
           make scraper-validate
           make scraper-plan OUTPUT_FILE=/tmp/tf.plan
           terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt

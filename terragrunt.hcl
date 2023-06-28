@@ -50,8 +50,8 @@ remote_state {
     encrypt        = true
     key            = "${path_relative_to_include()}/terraform.tfstate"
     region         = local.account_region_name
-    bucket         = lower("${local.organization_name}-${local.account_name}-${local.environment_name}-terraform-state")
-    dynamodb_table = lower("${local.organization_name}-${local.account_name}-${local.environment_name}-terraform-locks")
+    bucket         = lower("${local.organization_name}-${local.environment_name}-terraform-state")
+    dynamodb_table = lower("${local.organization_name}-${local.environment_name}-terraform-locks")
   }
 
   generate = {
