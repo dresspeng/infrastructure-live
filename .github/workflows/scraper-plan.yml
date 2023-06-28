@@ -91,6 +91,7 @@ jobs:
           sudo chmod +x /bin/terragrunt
           terragrunt -v
       - name: Terragrunt Plan
+        continue-on-error: true
         env: 
           GITHUB_TOKEN: ${GH_TERRA_TOKEN}
         run: |
@@ -101,7 +102,6 @@ jobs:
           cat /tmp/tf.plan
           terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt
       - uses: actions/github-script@v6
-        if: github.event_name == 'pull_request'
         with:
           github-token: ${{ github.token }}
           script: |
