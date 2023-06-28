@@ -98,6 +98,7 @@ jobs:
           make scraper-init
           make scraper-validate
           make scraper-plan OUTPUT_FILE=/tmp/tf.plan
+          cat /tmp/tf.plan
           terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
