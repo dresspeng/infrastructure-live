@@ -58,7 +58,7 @@ scraper-apply:
 prepare-terragrunt: ## Setup the environment
 	make prepare-convention
 	make prepare-aws-account
-	make prepare-aws-region
+	# make prepare-aws-region
 .ONESHELL: prepare-account-aws
 prepare-convention:
 	$(eval GIT_HOST=github.com)
@@ -83,7 +83,7 @@ prepare-convention:
 prepare-aws-account:
 	cat <<-EOF > ${PATH_ABS_AWS}/account_${OVERRIDE_EXTENSION}.hcl 
 	locals {
-		account_region_names	= ["${AWS_REGION}"]
+		account_region_name	= "${AWS_REGION}"
 		account_name			= "${AWS_PROFILE}"
 		account_id				= "${AWS_ACCOUNT_ID}"
 		common_tags = {
@@ -91,12 +91,12 @@ prepare-aws-account:
 		}
 	}
 	EOF
-prepare-aws-region:
-	cat <<-EOF > ${PATH_ABS_AWS}/region/region_${OVERRIDE_EXTENSION}.hcl 
-	locals {
-		region_names = ["${AWS_REGION}"]
-	}
-	EOF
+# prepare-aws-region:
+# 	cat <<-EOF > ${PATH_ABS_AWS}/region/region_${OVERRIDE_EXTENSION}.hcl 
+# 	locals {
+# 		region_name = "${AWS_REGION}"
+# 	}
+# 	EOF
 .ONESHELL: prepare-module-microservice-scraper-backend
 USE_FARGATE ?= false
 SERVICE_COUNT ?= 1

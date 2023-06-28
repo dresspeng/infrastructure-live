@@ -16,9 +16,9 @@ locals {
   modules_repository_name   = local.convention_vars.locals.modules_repository_name
   modules_branch_name       = local.convention_vars.locals.modules_branch_name
 
-  account_region_names = local.account_vars.locals.account_region_names
-  account_name         = local.account_vars.locals.account_name
-  account_id           = local.account_vars.locals.account_id
+  account_region_name = local.account_vars.locals.account_region_name
+  account_name        = local.account_vars.locals.account_name
+  account_id          = local.account_vars.locals.account_id
 
   project_name = local.project_vars.locals.project_name
 
