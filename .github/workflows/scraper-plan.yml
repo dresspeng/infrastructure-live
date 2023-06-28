@@ -103,7 +103,7 @@ jobs:
           terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt
       - uses: actions/github-script@v6
         with:
-          github-token: ${{ github.token }}
+          github-token: ${GH_TERRA_TOKEN}
           script: |
             const fs = require("fs");
             const plan = fs.readFileSync("/tmp/plan.txt", "utf8");
