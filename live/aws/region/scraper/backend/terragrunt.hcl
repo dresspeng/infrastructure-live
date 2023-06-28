@@ -11,7 +11,7 @@ locals {
 
   organization_name         = local.convention_vars.locals.organization_name
   environment_name          = local.convention_vars.locals.environment_name
-  modules_git_name          = local.convention_vars.locals.modules_git_name
+  modules_git_host_name     = local.convention_vars.locals.modules_git_host_name
   modules_organization_name = local.convention_vars.locals.modules_organization_name
   modules_repository_name   = local.convention_vars.locals.modules_repository_name
   modules_branch_name       = local.convention_vars.locals.modules_branch_name
@@ -102,7 +102,7 @@ locals {
 }
 
 terraform {
-  source = "git::git@${local.modules_git_name}:${local.modules_organization_name}/${local.modules_repository_name}.git//module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
+  source = "git::git@${local.modules_git_host_name}:${local.modules_organization_name}/${local.modules_repository_name}.git//module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
 }
 
 inputs = {

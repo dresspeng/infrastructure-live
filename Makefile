@@ -61,7 +61,7 @@ prepare-terragrunt: ## Setup the environment
 	make prepare-aws-region
 .ONESHELL: prepare-account-aws
 prepare-convention:
-	$(eval GIT_NAME=github.com)
+	$(eval GIT_HOST=github.com)
 	$(eval ORGANIZATION_NAME=KookaS)
 	$(eval PROJECT_NAME=infrastructure)
 	$(eval SERVICE_NAME=modules)
@@ -70,12 +70,12 @@ prepare-convention:
 	locals {
 		organization_name			= "${ORGANIZATION_NAME}"
 		environment_name			= "${ENVIRONMENT_NAME}"
-		modules_git_name			= "${GIT_NAME}"
+		modules_git_host_name		= "${GIT_HOST}"
 		modules_organization_name	= "${ORGANIZATION_NAME}"
 		modules_repository_name		= "${PROJECT_NAME}-${SERVICE_NAME}"
 		modules_branch_name			= "${BRANCH_NAME}"
 		common_tags = {
-			"Git Module" 	= "${GIT_NAME}/${ORGANIZATION_NAME}/${PROJECT_NAME}-${SERVICE_NAME}@${BRANCH_NAME}"
+			"Git Module" 	= "${GIT_HOST}/${ORGANIZATION_NAME}/${PROJECT_NAME}-${SERVICE_NAME}@${BRANCH_NAME}"
 			"Environment" 	= "${ENVIRONMENT_NAME}"
 		}
 	}
@@ -119,7 +119,7 @@ prepare-microservice:
 		repository_name 		= "${PROJECT_NAME}-${SERVICE_NAME}"
 		branch_name 			= "${BRANCH_NAME}"
 		common_tags = {
-			"Git Microservice" 	= "${GIT_NAME}/${ORGANIZATION_NAME}/${PROJECT_NAME}-${SERVICE_NAME}@${BRANCH_NAME}"
+			"Git Microservice" 	= "${GIT_HOST}/${ORGANIZATION_NAME}/${PROJECT_NAME}-${SERVICE_NAME}@${BRANCH_NAME}"
 			"Service" 			= "${SERVICE_NAME}"
 		}
 		use_fargate 	= ${USE_FARGATE}
@@ -195,7 +195,7 @@ export FLICKR_PRIVATE_KEY FLICKR_PUBLIC_KEY UNSPLASH_PRIVATE_KEY UNSPLASH_PUBLIC
 .ONESHELL: prepare-scraper-backend
 BRANCH_NAME ?= master
 prepare-scraper-backend:
-	$(eval GIT_NAME=github.com)
+	$(eval GIT_HOST=github.com)
 	$(eval ORGANIZATION_NAME=KookaS)
 	$(eval PROJECT_NAME=scraper)
 	$(eval SERVICE_NAME=backend)
@@ -206,7 +206,7 @@ prepare-scraper-backend:
 	make prepare-microservice \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		COMMON_NAME=${COMMON_NAME} \
-		GIT_NAME=${GIT_NAME} \
+		GIT_HOST=${GIT_HOST} \
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		PROJECT_NAME=${PROJECT_NAME} \
 		SERVICE_NAME=${SERVICE_NAME} \
@@ -238,7 +238,7 @@ prepare-scraper-backend-env:
 .ONESHELL: prepare-scraper-frontend
 BRANCH_NAME ?= master
 prepare-scraper-frontend:
-	$(eval GIT_NAME=github.com)
+	$(eval GIT_HOST=github.com)
 	$(eval ORGANIZATION_NAME=KookaS)
 	$(eval PROJECT_NAME=scraper)
 	$(eval SERVICE_NAME=frontend)
@@ -248,7 +248,7 @@ prepare-scraper-frontend:
 	make prepare-microservice \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		COMMON_NAME=${COMMON_NAME} \
-		GIT_NAME=${GIT_NAME} \
+		GIT_HOST=${GIT_HOST} \
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		PROJECT_NAME=${PROJECT_NAME} \
 		SERVICE_NAME=${SERVICE_NAME} \
@@ -271,12 +271,18 @@ prepare-scraper-frontend-env:
 		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
 		PORT=3000
 	
-aws-configure:
+aws-auth:
 	aws configure set aws_access_key_id ${AWS_ACCESS_KEY} --profile ${AWS_PROFILE} \
 		&& aws configure set --profile ${AWS_PROFILE} aws_secret_access_key ${AWS_SECRET_KEY} --profile ${AWS_PROFILE} \
 		&& aws configure set region ${AWS_REGION} --profile ${AWS_PROFILE} \
 		&& aws configure set output 'text' --profile ${AWS_PROFILE} \
 		&& aws configure list
+
+ssh-auth:
+	$(eval GIT_HOST=github.com)
+	mkdir -p ${SSH_FOLDER}
+	eval `ssh-agent -s`
+	ssh-keyscan ${GIT_HOST} >> ${SSH_FOLDER}/known_hosts
 
 # it needs the tfstate files which are generated with apply
 graph:

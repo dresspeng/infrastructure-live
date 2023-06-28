@@ -39,65 +39,62 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      # - name: Setup SSH
+      # - name: Setup AWS CLI
       #   run: |
-      #     mkdir -p ~/.ssh/
-      #     echo "$SSH_KEY" > ~/.ssh/action.key
-      #     chmod 600 ~/.ssh/action.key
-      #     ssh-add ~/.ssh/action.key
-      #     cat <<-EOF >> ~/.ssh/config
-      #       Host action
-      #       HostName $SSH_HOST
-      #       User $SSH_USER
-      #       IdentityFile ~/.ssh/action.key
-      #       StrictHostKeyChecking no
-      #     EOF
-      #     ssh -T $SSH_HOST
-      #   env:
-      #     SSH_USER: ${{ secrets.SSH_USER }}
-      #     SSH_KEY: ${{ secrets.SSH_KEY }}
-      #     SSH_HOST: ${{ secrets.SSH_HOST }}
-      - name: Add SSH key
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      #     aws --version
+      #     aws configure set aws_access_key_id $AWS_ACCESS_KEY
+      #     aws configure set aws_secret_access_key $AWS_SECRET_KEY
+      #     aws configure set region $AWS_REGION
+      # - name: Login to ECR
+      #   run: |
+      #     if [[ $AWS_CLI_SERVICE == ecr ]]; then
+      #       aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URI
+      #     elif [[ $AWS_CLI_SERVICE == ecr-public ]]; then
+      #       aws ecr-public get-login-password --region $AWS_REGION | docker login --username AWS ---password-stdin public.ecr.aws
+      #     fi
+      # - name: Terragrunt Plan
+      #   run: |
+      #     mkdir -p $(pwd)/.ssh
+      #     echo "${SSH_PRIVATE_KEY}" > $(pwd)/.ssh/action.key
+      #     sudo chown ${USER} $(pwd)/.ssh/action
+      #     sudo chmod -R 600 $(pwd)/.ssh/action
+      #     cat $(pwd)/.ssh/action.key
+      #     sudo docker build -t this-image -f Dockerfile .
+      #     sudo docker run -it \
+      #       -v /tmp:/tmp \
+      #       -v $(pwd)/.ssh:/home/user/.ssh \
+      #       --env AWS_REGION=${AWS_REGION} \
+      #       --env AWS_PROFILE=${AWS_PROFILE} \
+      #       --env AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+      #       --env AWS_SECRET_KEY=${AWS_SECRET_KEY} \
+      #       --env AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
+      #       --env ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
+      #       --env GITHUB_TOKEN=${GH_TERRA_TOKEN} \
+      #       this-image \
+      #       /bin/bash -c 'sudo chown ${USER} /home/user/.ssh; sudo chmod -R 600 /home/user/.ssh; ls -l /home/user/.ssh; sudo cat /home/user/.ssh/action.key; sudo make ssh-auth SSH_FOLDER="/home/user/.ssh"; ssh-add /home/user/.ssh/action.key; git config --global user.name $(git config --global user.name); git config --global user.email $(git config --global user.email); git config --global credential.helper $(git config --global credential.helper); echo $(git config --global -l); sudo make scraper-prepare; sudo make scraper-init; sudo make scraper-validate; sudo make scraper-plan OUTPUT_FILE=/tmp/tf.plan; terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt'
+      # Install the latest version of Terragrunt CLI and configure the Terragrunt CLI configuration file with a Terragrunt Cloud user API token
+      - name: Setup Terraform v1.4.6
+        uses: hashicorp/setup-Terraform@v1
+        with:
+          terraform_version: 1.4.6
+          terraform_wrapper: true
+      - name: Setup Terraform version
+        run: terraform --version
+      - name: Setup Terraform wrapper path
+        run: which terraform
+
+      - name: Setup Terragrunt v0.45.17
         run: |
-          mkdir -p /home/runner/.ssh
-          # Replace example.com with the hostname of the machine
-          # you're SSH-ing into
-          ssh-keyscan example.com >> /home/runner/.ssh/known_hosts
-          # SSH_KEY is the name of the repository secret
-          echo "${{ secrets.SSH_KEY }}" > /home/runner/.ssh/github_actions
-          chmod 600 /home/runner/.ssh/github_actions
-          ssh-agent -a $SSH_AUTH_SOCK > /dev/null	
-          ssh-add /home/runner/.ssh/github_actions
-      - name: Setup AWS CLI
-        run: |
-          aws --version
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY
-          aws configure set aws_secret_access_key $AWS_SECRET_KEY
-          aws configure set region $AWS_REGION
-      - name: Login to ECR
-        run: |
-          if [[ $AWS_CLI_SERVICE == ecr ]]; then
-            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URI
-          elif [[ $AWS_CLI_SERVICE == ecr-public ]]; then
-            aws ecr-public get-login-password --region $AWS_REGION | docker login --username AWS ---password-stdin public.ecr.aws
-          fi
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v0.45.17/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
       - name: Terragrunt Plan
         run: |
-          sudo docker build -t this-image -f Dockerfile .
-          sudo docker run -it \
-            -v /tmp:/tmp \
-            -v /home/runner/.ssh:~/.ssh \
-            --env AWS_REGION=${AWS_REGION} \
-            --env AWS_PROFILE=${AWS_PROFILE} \
-            --env AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
-            --env AWS_SECRET_KEY=${AWS_SECRET_KEY} \
-            --env AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
-            --env ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
-            --env GITHUB_TOKEN=${GH_TERRA_TOKEN} \
-            this-image \
-            /bin/bash -c 'make scraper-prepare; make scraper-init; make scraper-validate; make scraper-plan OUTPUT_FILE=/tmp/tf.plan; terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt'
+          make scraper-prepare
+          make scraper-init
+          make scraper-validate
+          make scraper-plan OUTPUT_FILE=/tmp/tf.plan
+          terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
         with:
