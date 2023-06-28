@@ -156,8 +156,8 @@ jobs:
 
             *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ github.workspace }}\`, Workflow: \`${{ github.workflow }}\`*`;
               
-            github.rest.pulls.createComment({
-              pull_number: context.pull.number,
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: output
