@@ -39,12 +39,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      # - name: Setup AWS CLI
-      #   run: |
-      #     aws --version
-      #     aws configure set aws_access_key_id $AWS_ACCESS_KEY
-      #     aws configure set aws_secret_access_key $AWS_SECRET_KEY
-      #     aws configure set region $AWS_REGION
+      - name: Setup AWS CLI
+        run: |
+          aws --version
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY
+          aws configure set aws_secret_access_key $AWS_SECRET_KEY
+          aws configure set region $AWS_REGION
       # - name: Login to ECR
       #   run: |
       #     if [[ $AWS_CLI_SERVICE == ecr ]]; then
