@@ -160,7 +160,8 @@ jobs:
             <details><summary>Show Plan</summary>
   
             \`\`\`\n
-            ${process.env.PLAN}
+            # ${process.env.PLAN}
+            $(make scraper-plan)
             \`\`\`
   
             </details>
