@@ -10,31 +10,31 @@ locals {
   account_id          = local.account_vars.locals.account_id
 }
 
-# Generate a Terraform and AWS version block
+# Generate version block
 generate "versions" {
-  path      = "versions_override.tf"
+  path      = "version_override.tf"
   if_exists = "overwrite_terragrunt"
   contents  = <<EOF
-    terraform {
-      required_providers {
-        aws = {
-          source  = "hashicorp/aws"
-          version = ">= 5.0.1"
-        }
-      }
-      required_version = ">= 1.4.0"
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0.1"
     }
+  }
+  required_version = ">= 1.4.0"
+}
 EOF
 }
 
-# Generate an AWS provider block
+# Generate provider block
 generate "provider" {
   path      = "provider_override.tf"
   if_exists = "overwrite_terragrunt"
   contents  = <<EOF
 provider "aws" {
-  region                = "${local.account_region_name}"
-  allowed_account_ids   = ["${local.account_id}"]
+  region = "${local.account_region_name}"
+  allowed_account_ids = ["${local.account_id}"]
 }
 EOF
 }
