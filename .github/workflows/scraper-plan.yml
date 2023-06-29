@@ -1,12 +1,28 @@
 name: Plan
 
 on:
-  workflow_run:
-    workflows: [Repository]
-    types: [completed]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'The branch to build'
+        required: true
+      environment:
+        description: 'The environment to deploy to'
+        required: false
+        default: KookaS
+      event:
+        type: choice
+        description: 'Type of event'     
+        required: true
+        options:
+        - up
+        - down
+  push:
     branches-ignore: [dependabot/**]
+  pull_request:
+    branches: [master]
 
-  env:
+env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   AWS_PROFILE: ${{ vars.AWS_PROFILE }}
   AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
@@ -16,15 +32,16 @@ on:
   ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
   ECR_REPOSITORY_NAME: kookas-infrastructure-live-master
   ECR_IMAGE_TAG: latest
-  GH_TERRA_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
   ENVIRONMENT_NAME: prod
   FLICKR_PRIVATE_KEY: 123
   FLICKR_PUBLIC_KEY: 123
   UNSPLASH_PRIVATE_KEY: 123
   UNSPLASH_PUBLIC_KEY: 123
   PEXELS_PUBLIC_KEY: 123
+  TERRAFORM_VERSION: 1.4.6
+  TERRAGRUNT_VERSION: 0.45.17
 
-  jobs:
+jobs:
   ecr-publish:
     name: ECR publish steps
     runs-on: ubuntu-latest
@@ -32,67 +49,175 @@ on:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Setup AWS CLI
         run: |
           aws --version
           aws configure set aws_access_key_id $AWS_ACCESS_KEY
           aws configure set aws_secret_access_key $AWS_SECRET_KEY
           aws configure set region $AWS_REGION
-      - name: Login to ECR
+
+      # - name: Login to ECR
+      #   run: |
+      #     if [[ $AWS_CLI_SERVICE == ecr ]]; then
+      #       aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URI
+      #     elif [[ $AWS_CLI_SERVICE == ecr-public ]]; then
+      #       aws ecr-public get-login-password --region $AWS_REGION | docker login --username AWS ---password-stdin public.ecr.aws
+      #     fi
+      # - name: Terragrunt Plan
+      #   run: |          
+      #     sudo docker build --progress=plain -t this-image -f Dockerfile .
+      #     sudo docker run -it \
+      #       -v /tmp:/tmp \
+      #       --user 1001:1001 \
+      #       --env AWS_REGION=${AWS_REGION} \
+      #       --env AWS_PROFILE=${AWS_PROFILE} \
+      #       --env AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+      #       --env AWS_SECRET_KEY=${AWS_SECRET_KEY} \
+      #       --env AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
+      #       --env ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
+      #       --env GITHUB_TOKEN=${GH_TERRA_TOKEN} \
+      #       --env KEY="${KEY}" \
+      #       --env P_KEY="${P_KEY}" \
+      #       --env GH_EVENT="up" \
+      #       this-image \
+      #       /bin/bash -c '
+
+      #         # tmp ownership
+      #         sudo mkdir -p /tmp/out
+      #         sudo chown 1001:1001 /tmp/out
+      #         sudo chmod g+s /tmp/out
+      #         ls -l /tmp/out
+
+      #         # aws
+      #         make aws-auth
+
+      #         # github token
+      #         make gh-auth-check
+
+      #         # ssh
+      #         eval `ssh-agent -s`
+      #         mkdir -p ~/.ssh
+      #         SSH_FOLDER=$(cd ~/.ssh; pwd)
+      #         echo ${SSH_FOLDER}
+      #         echo "${KEY}" > ~/.ssh/action
+      #         echo "${P_KEY}" > ~/.ssh/action.pub
+      #         sudo chmod -R 600 ${SSH_FOLDER}/action
+      #         ssh-add ~/.ssh/action
+      #         ssh-keyscan github.com >> ~/.ssh/known_hosts
+      #         cat ~/.ssh/known_hosts
+
+      #         # terragrunt              
+      #         if [[ "${GH_EVENT}" == "down" ]]; then
+      #           make scraper-prepare GITHUB_TOKEN=${GITHUB_TOKEN} SERVICE_UP=false
+      #         else
+      #           make scraper-prepare GITHUB_TOKEN=${GITHUB_TOKEN} SERVICE_UP=true
+      #         fi
+      #         make scraper-init
+      #         make scraper-validate 2>&1 > /tmp/out/validate.txt
+      #         make scraper-plan OUTPUT_FILE=/tmp/out/plan.tmp
+      #         terraform show -no-color /tmp/out/plan.tmp >tmp/plan.out
+      #         '
+      #         cat /tmp/out/validate.txt
+      #         cat /tmp/out/validate.txt >${GITHUB_WORKSPACE}/validate.txt
+      #         cat /tmp/out/plan.out >${GITHUB_WORKSPACE}/plan.out
+
+      - uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Setup Terraform v${{ env.TERRAFORM_VERSION }}
+        uses: hashicorp/setup-Terraform@v1
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: true
+
+      - name: Setup Terraform version
+        run: terraform --version
+
+      - name: Setup Terraform wrapper path
+        run: which terraform
+      - name: Setup Terragrunt v${{ env.TERRAGRUNT_VERSION }}
         run: |
-          if [[ $AWS_CLI_SERVICE == ecr ]]; then
-            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URI
-          elif [[ $AWS_CLI_SERVICE == ecr-public ]]; then
-            aws ecr-public get-login-password --region $AWS_REGION | docker login --username AWS ---password-stdin public.ecr.aws
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.TERRAGRUNT_VERSION }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
+
+      - name: Prepare Terragrunt
+        env: 
+          GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
+        run: |
+          if [[ "${{ inputs.event }}" == "down" ]]; then
+            make scraper-prepare SERVICE_UP=false
+          else
+            make scraper-prepare SERVICE_UP=true
           fi
-      - name: Terragrunt Plan
+
+      - name: Terragrunt init
+        id: init
         run: |
-          docker run --name modules -v "/tmp:/tmp" -d -i -t \          
-          -e AWS_REGION=${AWS_REGION} \
-          -e AWS_PROFILE=${AWS_PROFILE} \
-          -e AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
-          -e AWS_SECRET_KEY=${AWS_SECRET_KEY} \
-          -e AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
-          -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
-          -e GITHUB_TOKEN=${GH_TERRA_TOKEN} \
-          ${ECR_REGISTRY_URI}/${ECR_REPOSITORY_NAME}:${ECR_IMAGE_TAG} \
-          /bin/bash -c "make scraper-prepare; make scraper-init; make scraper validate; make scraper plan OUTPUT_FOLDER="/tmp; terraform show -no-color ${OUTPUT_FOLDER}/tf.plan 2>&1 > /tmp/plan.txt"
-      - uses: actions/github-script@v6
+          make scraper-init
+
+      - name: Terragrunt validate
+        id: validate
+        run: |
+          make scraper-validate
+
+      - name: Terragrunt plan
+        id: plan
+        continue-on-error: true
+        run: |
+          make scraper-plan OUTPUT_FILE=/tmp/plan.tmp
+          terraform show -no-color /tmp/plan.tmp >${GITHUB_WORKSPACE}/plan.out
+          ls ${GITHUB_WORKSPACE}
+
+      - name: Terraform - Show Plan in PR
+        uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
         with:
-          github-token: ${{ github.token }}
+          github-token: ${{ secrets.GH_TERRA_TOKEN }}
           script: |
-            const fs = require("fs");
-            const plan = fs.readFileSync("/tmp/plan.txt", "utf8");
-            const maxGitHubBodyCharacters = 65536;
+            const run_url = process.env.GITHUB_SERVER_URL + '/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID
+            const run_link = '<a href="' + run_url + '">Actions</a>.'
+            const fs = require('fs')
+            const plan_file = fs.readFileSync('plan.out', 'utf8')
+            const plan = plan_file.length > 65000 ? plan_file.toString().substring(0, 65000) + " ..." : plan_file
+            const truncated_message = plan_file.length > 65000 ? "Output is too long and was truncated. You can read full Plan in " + run_link + "<br /><br />" : ""
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            <details><summary>Validation Output</summary>
 
-            function chunkSubstr(str, size) {
-              const numChunks = Math.ceil(str.length / size)
-              const chunks = new Array(numChunks)
-              for (let i = 0, o = 0; i < numChunks; ++i, o += size) {
-                chunks[i] = str.substr(o, size)
-              }
-              return chunks
-            }
+            \`\`\`\n
+            ${{ steps.validate.outputs.stdout }}
+            \`\`\`
 
-            // Split the Terraform plan into chunks if it's too big and can't fit into the GitHub Action
-            var plans = chunkSubstr(plan, maxGitHubBodyCharacters); 
-            for (let i = 0; i < plans.length; i++) {
-              const output = `### ${{ inputs.plan-title }} Part # ${i + 1}
-              #### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
-              #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-              #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
-              <details><summary>Show Plan</summary>
-              \`\`\`\n
-              ${plans[i]}
-              \`\`\`
-              </details>
-              *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ inputs.working-directory }}\`, Workflow: \`${{ github.workflow }}\`*`;   
+            </details>
 
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: output
-              })
-            }
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+            
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`\n
+            ${plan}
+            \`\`\`
+            
+            </details>
+            ${truncated_message}
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ github.workspace }}\`, Workflow: \`${{ github.workflow }}\`*`;
+              
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Terragrunt validate
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          make scraper-apply
+          if [[ "${{ inputs.event }}" == "down" ]]; then
+            scraper-remove-lb
+          fi

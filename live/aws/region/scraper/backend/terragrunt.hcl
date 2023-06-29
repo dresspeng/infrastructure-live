@@ -11,14 +11,14 @@ locals {
 
   organization_name         = local.convention_vars.locals.organization_name
   environment_name          = local.convention_vars.locals.environment_name
-  modules_git_name          = local.convention_vars.locals.modules_git_name
+  modules_git_host_name     = local.convention_vars.locals.modules_git_host_name
   modules_organization_name = local.convention_vars.locals.modules_organization_name
   modules_repository_name   = local.convention_vars.locals.modules_repository_name
   modules_branch_name       = local.convention_vars.locals.modules_branch_name
 
-  account_region_names = local.account_vars.locals.account_region_names
-  account_name         = local.account_vars.locals.account_name
-  account_id           = local.account_vars.locals.account_id
+  account_region_name = local.account_vars.locals.account_region_name
+  account_name        = local.account_vars.locals.account_name
+  account_id          = local.account_vars.locals.account_id
 
   project_name = local.project_vars.locals.project_name
 
@@ -102,7 +102,7 @@ locals {
 }
 
 terraform {
-  source = "git::git@${local.modules_git_name}:${local.modules_organization_name}/${local.modules_repository_name}.git//module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
+  source = "git::git@${local.modules_git_host_name}:${local.modules_organization_name}/${local.modules_repository_name}.git//module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
 }
 
 inputs = {
@@ -125,7 +125,7 @@ inputs = {
     bucket_env = {
       name          = local.env_bucket_name
       file_key      = local.env_key
-      file_path     = "${local.override_extension_name}.env"
+      file_path     = "${path_relative_to_include()}/${local.override_extension_name}.env"
       force_destroy = false
       versioning    = true
     }
