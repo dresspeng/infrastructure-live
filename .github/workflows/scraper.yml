@@ -1,4 +1,4 @@
-name: Plan
+name: Scraper
 
 on:
   workflow_dispatch:

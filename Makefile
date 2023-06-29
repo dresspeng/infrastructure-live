@@ -108,7 +108,8 @@ scraper-validate:
 	terragrunt validate --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
 scraper-plan:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
-	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -lock=false -out=${OUTPUT_FILE} 2>&1
+	# -lock=false
+	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -no-color -out=${OUTPUT_FILE} 2>&1
 scraper-apply:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
 	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
@@ -152,7 +153,7 @@ prepare-aws-account:
 		}
 	}
 	EOF
-	
+
 .ONESHELL: prepare-module-microservice-scraper-backend
 USE_FARGATE ?= false
 SERVICE_COUNT ?= 1
