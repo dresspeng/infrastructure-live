@@ -49,6 +49,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Setup AWS CLI
         run: |
           aws --version
@@ -128,8 +129,9 @@ jobs:
         id: plan
         continue-on-error: true
         run: |
-          make scraper-plan OUTPUT_FILE=plan.tmp
-          terraform show -no-color plan.tmp >${GITHUB_WORKSPACE}/plan.out
+          make scraper-plan OUTPUT_FILE=/tmp/plan.tmp
+          terraform show -no-color /tmp/plan.tmp >${GITHUB_WORKSPACE}/plan.out
+          ls ${GITHUB_WORKSPACE}
 
       - name: Terraform - Show Plan in PR
         uses: actions/github-script@v6
