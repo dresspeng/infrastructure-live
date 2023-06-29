@@ -7,7 +7,9 @@ FROM ${VARIANT}
 
 RUN sudo apk add --no-cache curl jq openssh
 
-RUN export USERNAME=${USER}; export USER_UID=$(id -u ${USERNAME})
+ARG USERNAME=user
+ARG USER_UID=1001
+ARG USER_GID=$USER_UID
 USER $USERNAME
 
 WORKDIR /home/$USERNAME

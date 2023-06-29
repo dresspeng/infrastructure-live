@@ -56,6 +56,7 @@ jobs:
           aws configure set aws_access_key_id $AWS_ACCESS_KEY
           aws configure set aws_secret_access_key $AWS_SECRET_KEY
           aws configure set region $AWS_REGION
+
       # - name: Login to ECR
       #   run: |
       #     if [[ $AWS_CLI_SERVICE == ecr ]]; then
@@ -64,16 +65,11 @@ jobs:
       #       aws ecr-public get-login-password --region $AWS_REGION | docker login --username AWS ---password-stdin public.ecr.aws
       #     fi
       # - name: Terragrunt Plan
-      #   run: |
-      #     mkdir -p $(pwd)/.ssh
-      #     echo "${SSH_PRIVATE_KEY}" > $(pwd)/.ssh/action.key
-      #     sudo chown ${USER} $(pwd)/.ssh/action
-      #     sudo chmod -R 600 $(pwd)/.ssh/action
-      #     cat $(pwd)/.ssh/action.key
-      #     sudo docker build -t this-image -f Dockerfile .
+      #   run: |          
+      #     sudo docker build --progress=plain -t this-image -f Dockerfile .
       #     sudo docker run -it \
       #       -v /tmp:/tmp \
-      #       -v $(pwd)/.ssh:/home/user/.ssh \
+      #       --user 1001:1001 \
       #       --env AWS_REGION=${AWS_REGION} \
       #       --env AWS_PROFILE=${AWS_PROFILE} \
       #       --env AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
@@ -81,9 +77,51 @@ jobs:
       #       --env AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
       #       --env ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
       #       --env GITHUB_TOKEN=${GH_TERRA_TOKEN} \
+      #       --env KEY="${KEY}" \
+      #       --env P_KEY="${P_KEY}" \
+      #       --env GH_EVENT="up" \
       #       this-image \
-      #       /bin/bash -c 'sudo chown ${USER} /home/user/.ssh; sudo chmod -R 600 /home/user/.ssh; ls -l /home/user/.ssh; sudo cat /home/user/.ssh/action.key; sudo make ssh-auth SSH_FOLDER="/home/user/.ssh"; ssh-add /home/user/.ssh/action.key; git config --global user.name $(git config --global user.name); git config --global user.email $(git config --global user.email); git config --global credential.helper $(git config --global credential.helper); echo $(git config --global -l); sudo make scraper-prepare; sudo make scraper-init; sudo make scraper-validate; sudo make scraper-plan OUTPUT_FILE=/tmp/tf.plan; terraform show -no-color /tmp/tf.plan 2>&1 > /tmp/plan.txt'
-      # Install the latest version of Terragrunt CLI and configure the Terragrunt CLI configuration file with a Terragrunt Cloud user API token
+      #       /bin/bash -c '
+
+      #         # tmp ownership
+      #         sudo mkdir -p /tmp/out
+      #         sudo chown 1001:1001 /tmp/out
+      #         sudo chmod g+s /tmp/out
+      #         ls -l /tmp/out
+
+      #         # aws
+      #         make aws-auth
+
+      #         # github token
+      #         make gh-auth-check
+
+      #         # ssh
+      #         eval `ssh-agent -s`
+      #         mkdir -p ~/.ssh
+      #         SSH_FOLDER=$(cd ~/.ssh; pwd)
+      #         echo ${SSH_FOLDER}
+      #         echo "${KEY}" > ~/.ssh/action
+      #         echo "${P_KEY}" > ~/.ssh/action.pub
+      #         sudo chmod -R 600 ${SSH_FOLDER}/action
+      #         ssh-add ~/.ssh/action
+      #         ssh-keyscan github.com >> ~/.ssh/known_hosts
+      #         cat ~/.ssh/known_hosts
+
+      #         # terragrunt              
+      #         if [[ "${GH_EVENT}" == "down" ]]; then
+      #           make scraper-prepare GITHUB_TOKEN=${GITHUB_TOKEN} SERVICE_UP=false
+      #         else
+      #           make scraper-prepare GITHUB_TOKEN=${GITHUB_TOKEN} SERVICE_UP=true
+      #         fi
+      #         make scraper-init
+      #         make scraper-validate 2>&1 > /tmp/out/validate.txt
+      #         make scraper-plan OUTPUT_FILE=/tmp/out/plan.tmp
+      #         terraform show -no-color /tmp/out/plan.tmp >tmp/plan.out
+      #         '
+      #         cat /tmp/out/validate.txt
+      #         cat /tmp/out/validate.txt >${GITHUB_WORKSPACE}/validate.txt
+      #         cat /tmp/out/plan.out >${GITHUB_WORKSPACE}/plan.out
+
       - uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}

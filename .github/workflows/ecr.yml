@@ -21,7 +21,6 @@ on:
   # create:
   #   branches-ignore: [dependabot/**]
   delete:
-    branches-ignore: [dependabot/**]
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}

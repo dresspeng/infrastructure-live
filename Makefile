@@ -18,7 +18,7 @@ PATH_ABS_AWS=${PATH_ABS_ROOT}/${PATH_REL_AWS}
 
 OVERRIDE_EXTENSION=override
 export OVERRIDE_EXTENSION
-export AWS_REGION AWS_PROFILE AWS_ACCOUNT_ID AWS_ACCESS_KEY AWS_SECRET_KEY ENVIRONMENT_NAME
+export AWS_REGION AWS_PROFILE AWS_ACCOUNT_ID AWS_ACCESS_KEY AWS_SECRET_KEY ENVIRONMENT_NAME GITHUB_TOKEN
 
 .SILENT:	# silent all commands below
 # https://www.gnu.org/software/make/manual/html_node/Options-Summary.html
@@ -46,15 +46,60 @@ nuke-region:
 nuke-global:
 	cloud-nuke aws --region global --config .gruntwork/cloud-nuke/config.yaml --force;
 
+.ONESHELL: aws-auth
+aws-auth:
+	aws configure set aws_access_key_id ${AWS_ACCESS_KEY} --profile ${AWS_PROFILE}
+	aws configure set --profile ${AWS_PROFILE} aws_secret_access_key ${AWS_SECRET_KEY} --profile ${AWS_PROFILE}
+	aws configure set region ${AWS_REGION} --profile ${AWS_PROFILE}
+	aws configure set output 'text' --profile ${AWS_PROFILE}
+	make aws-auth-check
+aws-auth-check:
+	aws configure list
+.ONESHELL: ecr-configure
+
+ssh-auth:
+	$(eval GIT_HOST=github.com)
+	mkdir -p ${SSH_FOLDER}
+	eval `ssh-agent -s`
+	ssh-keyscan ${GIT_HOST} >> ${SSH_FOLDER}/known_hosts
+
+gh-auth-check:
+	gh auth status
+.ONESHELL: gh-load-folder
+gh-load-folder:
+	echo GET Github folder:: ${REPOSITORY_PATH}
+	$(eval res=$(shell curl -L \
+		-H "Accept: application/vnd.github+json" \
+		-H "Authorization: Bearer ${GITHUB_TOKEN}" \
+		-H "X-GitHub-Api-Version: 2022-11-28" \
+		https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_PATH}?ref=${BRANCH_NAME} | jq -c '.[] | .path'))
+	for file in ${res}; do
+		echo GET Github file:: "$$file"; \
+		make gh-load-file \
+			GITHUB_TOKEN=${GITHUB_TOKEN} \
+			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+			REPOSITORY_PATH="$$file" \
+			ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+			REPOSITORY_NAME=${REPOSITORY_NAME} \
+			BRANCH_NAME=${BRANCH_NAME}; \
+    done
+gh-load-file:
+	curl -L -o ${OUTPUT_FOLDER}/$(shell basename ${REPOSITORY_PATH} | cut -d. -f1)_${OVERRIDE_EXTENSION}$(shell [[ "${REPOSITORY_PATH}" = *.* ]] && echo .$(shell basename ${REPOSITORY_PATH} | cut -d. -f2) || echo '') \
+			-H "Accept: application/vnd.github.v3.raw" \
+			-H "Authorization: Bearer ${GITHUB_TOKEN}" \
+			-H "X-GitHub-Api-Version: 2022-11-28" \
+			https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_PATH}?ref=${BRANCH_NAME}
+
+
 SCRAPER_BACKEND_BRANCH_NAME ?= master
 SCRAPER_FRONTEND_BRANCH_NAME ?= master
 SERVICE_UP ?= true
 .ONESHELL: set-scraper
 scraper-prepare:
-	make prepare-terragrunt
-	make prepare-scraper-backend BRANCH_NAME=${SCRAPER_BACKEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
+	make prepare-terragrunt OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
+	make prepare-scraper-backend GITHUB_TOKEN=${GITHUB_TOKEN} BRANCH_NAME=${SCRAPER_BACKEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
 	# TODO: extract backend dns
-	# make prepare-scraper-frontend BRANCH_NAME=${SCRAPER_FRONTEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
+	# make prepare-scraper-frontend GITHUB_TOKEN=${GITHUB_TOKEN} BRANCH_NAME=${SCRAPER_FRONTEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
 scraper-init:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
 	terragrunt init --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
@@ -66,16 +111,15 @@ scraper-plan:
 	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -lock=false -out=${OUTPUT_FILE} 2>&1
 scraper-apply:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
-	terragrunt apply --terragrunt-non-interactive  -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
 scraper-remove-lb:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
 	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs.module.alb
 
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
-	make prepare-convention
-	make prepare-aws-account
-	# make prepare-aws-region
+	make prepare-convention OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
+	make prepare-aws-account OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
 .ONESHELL: prepare-account-aws
 prepare-convention:
 	$(eval GIT_HOST=github.com)
@@ -108,12 +152,7 @@ prepare-aws-account:
 		}
 	}
 	EOF
-# prepare-aws-region:
-# 	cat <<-EOF > ${PATH_ABS_AWS}/region/region_${OVERRIDE_EXTENSION}.hcl 
-# 	locals {
-# 		region_name = "${AWS_REGION}"
-# 	}
-# 	EOF
+	
 .ONESHELL: prepare-module-microservice-scraper-backend
 USE_FARGATE ?= false
 SERVICE_COUNT ?= 1
@@ -184,30 +223,6 @@ prepare-microservice:
 
 	echo "}" >> ${FILE}
 
-.ONESHELL: gh-load-folder
-gh-load-folder:
-	echo GET Github folder:: ${REPOSITORY_PATH}
-	$(eval res=$(shell curl -L \
-		-H "Accept: application/vnd.github+json" \
-		-H "Authorization: Bearer ${GITHUB_TOKEN}" \
-		-H "X-GitHub-Api-Version: 2022-11-28" \
-		https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_PATH}?ref=${BRANCH_NAME} | jq -c '.[] | .path'))
-	for file in ${res}; do
-		echo GET Github file:: "$$file"; \
-		make gh-load-file \
-			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-			REPOSITORY_PATH="$$file" \
-			ORGANIZATION_NAME=${ORGANIZATION_NAME} \
-			REPOSITORY_NAME=${REPOSITORY_NAME} \
-			BRANCH_NAME=${BRANCH_NAME}; \
-    done
-gh-load-file:
-	curl -L -o ${OUTPUT_FOLDER}/$(shell basename ${REPOSITORY_PATH} | cut -d. -f1)_${OVERRIDE_EXTENSION}$(shell [[ "${REPOSITORY_PATH}" = *.* ]] && echo .$(shell basename ${REPOSITORY_PATH} | cut -d. -f2) || echo '') \
-			-H "Accept: application/vnd.github.v3.raw" \
-			-H "Authorization: Bearer ${GITHUB_TOKEN}" \
-			-H "X-GitHub-Api-Version: 2022-11-28" \
-			https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_PATH}?ref=${BRANCH_NAME}
-
 export FLICKR_PRIVATE_KEY FLICKR_PUBLIC_KEY UNSPLASH_PRIVATE_KEY UNSPLASH_PUBLIC_KEY PEXELS_PUBLIC_KEY
 .ONESHELL: prepare-scraper-backend
 BRANCH_NAME ?= master
@@ -231,6 +246,7 @@ prepare-scraper-backend:
 		BRANCH_NAME=${BRANCH_NAME} \
 		SERVICE_UP=${SERVICE_UP}
 	make gh-load-folder \
+		GITHUB_TOKEN=${GITHUB_TOKEN} \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
@@ -273,6 +289,7 @@ prepare-scraper-frontend:
 		BRANCH_NAME=${BRANCH_NAME} \
 		SERVICE_UP=${SERVICE_UP}
 	make gh-load-folder \
+		GITHUB_TOKEN=${GITHUB_TOKEN} \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
@@ -287,19 +304,6 @@ prepare-scraper-frontend-env:
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
 		PORT=3000
-	
-aws-auth:
-	aws configure set aws_access_key_id ${AWS_ACCESS_KEY} --profile ${AWS_PROFILE} \
-		&& aws configure set --profile ${AWS_PROFILE} aws_secret_access_key ${AWS_SECRET_KEY} --profile ${AWS_PROFILE} \
-		&& aws configure set region ${AWS_REGION} --profile ${AWS_PROFILE} \
-		&& aws configure set output 'text' --profile ${AWS_PROFILE} \
-		&& aws configure list
-
-ssh-auth:
-	$(eval GIT_HOST=github.com)
-	mkdir -p ${SSH_FOLDER}
-	eval `ssh-agent -s`
-	ssh-keyscan ${GIT_HOST} >> ${SSH_FOLDER}/known_hosts
 
 # it needs the tfstate files which are generated with apply
 graph:
