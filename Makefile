@@ -32,14 +32,35 @@ help:
 fmt: ## Format all files
 	terragrunt hclfmt
 
-clean:
+.ONESHELL: clean
+clean: ## Clean the test environment
 	make nuke-region
 	make nuke-global
+
+	make clean-task-definition
+	make clean-elb
+	make clean-ecs
+
 	make clean-local
 clean-local: ## Clean the local files and folders
 	echo "Delete state backup files..."; for folderPath in $(shell find . -type f -name ".terraform.lock.hcl"); do echo $$folderPath; rm -Rf $$folderPath; done; \
 	echo "Delete override files..."; for filePath in $(shell find . -type f -name "*override*"); do echo $$filePath; rm $$filePath; done; \
 	echo "Delete temp folder..."; for folderPath in $(shell find . -type d -name ".terragrunt-cache"); do echo $$folderPath; rm -Rf $$folderPath; done;
+clean-cloudwatch:
+	for alarmName in $(shell aws cloudwatch describe-alarms --query 'MetricAlarms[].AlarmName'); do echo $$alarmName; aws cloudwatch delete-alarms --alarm-names $$alarmName; done;
+clean-task-definition:
+	for taskDefinition in $(shell aws ecs list-task-definitions --status ACTIVE --query 'taskDefinitionArns[]'); do aws ecs deregister-task-definition --task-definition $$taskDefinition --query 'taskDefinition.taskDefinitionArn'; done;
+clean-iam:
+	# roles are attached to policies
+	for roleName in $(shell aws iam list-roles --query 'Roles[].RoleName'); do echo $$roleArn; aws iam delete-role --role-name $$roleName; done; \
+	for policyArn in $(shell aws iam list-policies --max-items 200 --no-only-attached --query 'Policies[].Arn'); do echo $$policyArn; aws iam delete-policy --policy-arn $$policyArn; done;
+clean-ec2:
+	for launchTemplateId in $(shell aws ec2 describe-launch-templates --query 'LaunchTemplates[].LaunchTemplateId'); do aws ec2 delete-launch-template --launch-template-id $$launchTemplateId --query 'LaunchTemplate.LaunchTemplateName'; done;
+clean-elb:
+	for targetGroupArn in $(shell aws elbv2 describe-target-groups --query 'TargetGroups[].TargetGroupArn'); do echo $$targetGroupArn; aws elbv2 delete-target-group --target-group-arn $$targetGroupArn; done;
+clean-ecs:
+	for clusterArn in $(shell aws ecs describe-clusters --query 'clusters[].clusterArn'); do echo $$clusterArn; aws ecs delete-cluster --cluster $$clusterArn; done;
+	for capacityProviderArn in $(shell aws ecs describe-capacity-providers --query 'capacityProviders[].capacityProviderArn'); do aws ecs   delete-capacity-provider --capacity-provider $$capacityProviderArn --query 'capacityProvider.capacityProviderArn'; done;
 
 nuke-region:
 	cloud-nuke aws --region ${AWS_REGION} --config .gruntwork/cloud-nuke/config.yaml --force;
@@ -97,7 +118,15 @@ SERVICE_UP ?= true
 .ONESHELL: set-scraper
 scraper-prepare:
 	make prepare-terragrunt OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
-	make prepare-scraper-backend GITHUB_TOKEN=${GITHUB_TOKEN} BRANCH_NAME=${SCRAPER_BACKEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
+	make prepare-scraper-backend \
+		GITHUB_TOKEN=${GITHUB_TOKEN} \
+		BRANCH_NAME=${SCRAPER_BACKEND_BRANCH_NAME} \
+		SERVICE_UP=${SERVICE_UP} \
+		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
+		FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
+		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
+		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
+		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
 	# TODO: extract backend dns
 	# make prepare-scraper-frontend GITHUB_TOKEN=${GITHUB_TOKEN} BRANCH_NAME=${SCRAPER_FRONTEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
 scraper-init:
@@ -225,7 +254,6 @@ prepare-microservice:
 	echo "}" >> ${FILE}
 	echo service_${OVERRIDE_EXTENSION}:::; cat ${FILE}
 
-export FLICKR_PRIVATE_KEY FLICKR_PUBLIC_KEY UNSPLASH_PRIVATE_KEY UNSPLASH_PUBLIC_KEY PEXELS_PUBLIC_KEY
 .ONESHELL: prepare-scraper-backend
 BRANCH_NAME ?= master
 prepare-scraper-backend:
@@ -233,6 +261,7 @@ prepare-scraper-backend:
 	$(eval ORGANIZATION_NAME=KookaS)
 	$(eval PROJECT_NAME=scraper)
 	$(eval SERVICE_NAME=backend)
+	$(eval REPOSITORY_CONFIG_PATH=config)
 	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
 	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
 	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
@@ -253,11 +282,16 @@ prepare-scraper-backend:
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		BRANCH_NAME=${BRANCH_NAME} \
-		REPOSITORY_PATH=config
+		REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
 	make prepare-scraper-backend-env \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		COMMON_NAME=${COMMON_NAME} \
-		CLOUD_HOST=${CLOUD_HOST}
+		CLOUD_HOST=${CLOUD_HOST} \
+		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
+		FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
+		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
+		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
+		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
 prepare-scraper-backend-env:
 	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
@@ -277,6 +311,7 @@ prepare-scraper-frontend:
 	$(eval ORGANIZATION_NAME=KookaS)
 	$(eval PROJECT_NAME=scraper)
 	$(eval SERVICE_NAME=frontend)
+	$(eval REPOSITORY_CONFIG_PATH=config)
 	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
 	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
 	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
@@ -296,10 +331,11 @@ prepare-scraper-frontend:
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		BRANCH_NAME=${BRANCH_NAME} \
-		REPOSITORY_PATH=config
+		REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
 	make prepare-scraper-frontend-env \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY}
 prepare-scraper-frontend-env:
 	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \

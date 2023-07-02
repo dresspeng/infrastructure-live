@@ -6,7 +6,7 @@ on:
       environment:
         description: 'The environment to deploy to'
         required: false
-        default: KookaS
+        default: master
       event:
         type: choice
         description: 'Type of event'     
@@ -20,21 +20,9 @@ on:
     branches: [master]
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  AWS_PROFILE: ${{ vars.AWS_PROFILE }}
-  AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-  AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
-  AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
   AWS_CLI_SERVICE: ecr
-  ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
-  ECR_REPOSITORY_NAME: kookas-infrastructure-live-master
   ECR_IMAGE_TAG: latest
   ENVIRONMENT_NAME: prod
-  FLICKR_PRIVATE_KEY: 123
-  FLICKR_PUBLIC_KEY: 123
-  UNSPLASH_PRIVATE_KEY: 123
-  UNSPLASH_PUBLIC_KEY: 123
-  PEXELS_PUBLIC_KEY: 123
   TERRAFORM_VERSION: 1.4.6
   TERRAGRUNT_VERSION: 0.45.17
 
@@ -42,7 +30,13 @@ jobs:
   ecr-publish:
     name: ECR publish steps
     runs-on: ubuntu-latest
-    environment: KookaS
+    environment: ${{ inputs.environment || 'master' }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_PROFILE: ${{ vars.AWS_PROFILE }}
+      AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -55,6 +49,8 @@ jobs:
           aws configure set region $AWS_REGION
 
       # - name: Login to ECR
+      #   env:
+      #     ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
       #   run: |
       #     if [[ $AWS_CLI_SERVICE == ecr ]]; then
       #       aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URI
@@ -115,7 +111,6 @@ jobs:
       #         make scraper-plan OUTPUT_FILE=/tmp/out/plan.tmp
       #         terraform show -no-color /tmp/out/plan.tmp >tmp/plan.out
       #         '
-      #         cat /tmp/out/validate.txt
       #         cat /tmp/out/validate.txt >${GITHUB_WORKSPACE}/validate.txt
       #         cat /tmp/out/plan.out >${GITHUB_WORKSPACE}/plan.out
 
@@ -143,11 +138,24 @@ jobs:
       - name: Prepare Terragrunt
         env: 
           GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
+          FLICKR_PRIVATE_KEY: ${{ secrets.FLICKR_PRIVATE_KEY }}
+          FLICKR_PUBLIC_KEY: ${{ secrets.FLICKR_PUBLIC_KEY }}
+          UNSPLASH_PRIVATE_KEY: ${{ secrets.UNSPLASH_PRIVATE_KEY }}
+          UNSPLASH_PUBLIC_KEY: ${{ secrets.UNSPLASH_PUBLIC_KEY }}
+          PEXELS_PUBLIC_KEY: ${{ secrets.PEXELS_PUBLIC_KEY }}
         run: |
+          # SCRAPER_BACKEND_BRANCH_NAME: github branch without prefix
+          # SCRAPER_FRONTEND_BRANCH_NAME
           if [[ "${{ inputs.event }}" == "down" ]]; then
             make scraper-prepare SERVICE_UP=false
           else
-            make scraper-prepare SERVICE_UP=true
+            make scraper-prepare \
+              SERVICE_UP=true \
+              FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
+              FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
+              UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
+              UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
+              PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
           fi
 
       - name: Terragrunt init
@@ -167,7 +175,6 @@ jobs:
         run: |
           make scraper-plan OUTPUT_FILE=/tmp/plan.tmp
           terraform show -no-color /tmp/plan.tmp >${GITHUB_WORKSPACE}/plan.out
-          ls ${GITHUB_WORKSPACE}
 
       - name: Terraform - Show Plan in PR
         uses: actions/github-script@v6
