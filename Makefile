@@ -223,6 +223,7 @@ prepare-microservice:
 	fi
 
 	echo "}" >> ${FILE}
+	echo service_${OVERRIDE_EXTENSION}:::; cat ${FILE}
 
 export FLICKR_PRIVATE_KEY FLICKR_PUBLIC_KEY UNSPLASH_PRIVATE_KEY UNSPLASH_PUBLIC_KEY PEXELS_PUBLIC_KEY
 .ONESHELL: prepare-scraper-backend

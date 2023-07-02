@@ -3,9 +3,6 @@ name: Scraper
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'The branch to build'
-        required: true
       environment:
         description: 'The environment to deploy to'
         required: false
@@ -165,6 +162,7 @@ jobs:
 
       - name: Terragrunt plan
         id: plan
+        if: github.event_name == 'pull_request'
         continue-on-error: true
         run: |
           make scraper-plan OUTPUT_FILE=/tmp/plan.tmp
@@ -214,10 +212,10 @@ jobs:
               body: output
             })
 
-      - name: Terragrunt validate
+      - name: Terragrunt apply
         if: github.event_name == 'workflow_dispatch'
         run: |
           make scraper-apply
           if [[ "${{ inputs.event }}" == "down" ]]; then
-            scraper-remove-lb
+            make scraper-remove-lb
           fi
