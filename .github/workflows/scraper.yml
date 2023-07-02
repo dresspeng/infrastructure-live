@@ -6,7 +6,7 @@ on:
       environment:
         description: 'The environment to deploy to'
         required: false
-        default: master
+        default: KookaS
       event:
         type: choice
         description: 'Type of event'     
@@ -30,7 +30,7 @@ jobs:
   ecr-publish:
     name: ECR publish steps
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'master' }}
+    environment: ${{ inputs.environment || 'KookaS' }}
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_PROFILE: ${{ vars.AWS_PROFILE }}
@@ -144,8 +144,8 @@ jobs:
           UNSPLASH_PUBLIC_KEY: ${{ secrets.UNSPLASH_PUBLIC_KEY }}
           PEXELS_PUBLIC_KEY: ${{ secrets.PEXELS_PUBLIC_KEY }}
         run: |
-          # SCRAPER_BACKEND_BRANCH_NAME: github branch without prefix
-          # SCRAPER_FRONTEND_BRANCH_NAME
+          # SCRAPER_BACKEND_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          # SCRAPER_FRONTEND_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
           if [[ "${{ inputs.event }}" == "down" ]]; then
             make scraper-prepare SERVICE_UP=false
           else
