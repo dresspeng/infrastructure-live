@@ -174,7 +174,7 @@ prepare-convention:
 prepare-aws-account:
 	cat <<-EOF > ${PATH_ABS_AWS}/account_${OVERRIDE_EXTENSION}.hcl 
 	locals {
-		account_region_name	= "${AWS_REGION}"
+		account_region_name		= "${AWS_REGION}"
 		account_name			= "${AWS_PROFILE}"
 		account_id				= "${AWS_ACCOUNT_ID}"
 		common_tags = {
@@ -185,10 +185,9 @@ prepare-aws-account:
 
 .ONESHELL: prepare-module-microservice-scraper-backend
 USE_FARGATE ?= false
-SERVICE_COUNT ?= 1
-INSTANCE_MIN_COUNT ?= 0
-INSTANCE_DESIRED_COUNT ?= 1
-INSTANCE_MAX_COUNT ?= 1
+TASK_MIN_COUNT ?= 0
+TASK_DESIRED_COUNT ?= 1
+TASK_MAX_COUNT ?= 1
 PRICING_NAMES ?= ["on-demand"]
 EC2_INSTANCE_KEY ?= "t3_small"
 FARGATE_INSTANCE_KEY ?= "set_1"
@@ -215,40 +214,18 @@ prepare-microservice:
 		architecture 	= ${ARCHITECTURE}
 	EOF
 
-	if [[ ${USE_FARGATE} == true ]]; then
-		# FARGATE
+	if [[ ${SERVICE_UP} == true ]]; then
 		cat <<-EOF >> ${FILE}
-			fargate_instance_key = ${FARGATE_INSTANCE_KEY}
+			task_min_count     = ${TASK_MIN_COUNT}
+  			task_desired_count = ${TASK_DESIRED_COUNT}
+  			task_max_count     = ${TASK_MAX_COUNT}
 		EOF
-		if [[ ${SERVICE_UP} == true ]]; then
-			cat <<-EOF >> ${FILE}
-				service_count = ${SERVICE_COUNT}
-			EOF
-		else
-			cat <<-EOF >> ${FILE}
-				service_count = 0
-			EOF
-		fi
 	else
-		# EC2
 		cat <<-EOF >> ${FILE}
-			ec2_instance_key = ${EC2_INSTANCE_KEY}
+			task_min_count 		= 0
+			task_desired_count 	= 0
+			task_max_count 		= 0
 		EOF
-		if [[ ${SERVICE_UP} == true ]]; then
-			cat <<-EOF >> ${FILE}
-				service_count 			= 1
-				instance_min_count 		= ${INSTANCE_MIN_COUNT}
-				instance_desired_count 	= ${INSTANCE_DESIRED_COUNT}
-				instance_max_count 		= ${INSTANCE_MAX_COUNT}
-			EOF
-		else
-			cat <<-EOF >> ${FILE}
-				service_count 			= 0
-				instance_min_count 		= 0
-				instance_desired_count 	= 0
-				instance_max_count 		= 0
-			EOF
-		fi
 	fi
 
 	echo "}" >> ${FILE}
@@ -276,14 +253,14 @@ prepare-scraper-backend:
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		BRANCH_NAME=${BRANCH_NAME} \
 		SERVICE_UP=${SERVICE_UP}
+	make gh-load-folder \
+		GITHUB_TOKEN=${GITHUB_TOKEN} \
+		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+		REPOSITORY_NAME=${REPOSITORY_NAME} \
+		BRANCH_NAME=${BRANCH_NAME} \
+		REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
 	if [[ ${SERVICE_UP} == true ]]; then
-		make gh-load-folder \
-			GITHUB_TOKEN=${GITHUB_TOKEN} \
-			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-			ORGANIZATION_NAME=${ORGANIZATION_NAME} \
-			REPOSITORY_NAME=${REPOSITORY_NAME} \
-			BRANCH_NAME=${BRANCH_NAME} \
-			REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
 		make prepare-scraper-backend-env \
 			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 			COMMON_NAME=${COMMON_NAME} \
@@ -327,14 +304,14 @@ prepare-scraper-frontend:
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		BRANCH_NAME=${BRANCH_NAME} \
 		SERVICE_UP=${SERVICE_UP}
+	make gh-load-folder \
+		GITHUB_TOKEN=${GITHUB_TOKEN} \
+		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+		REPOSITORY_NAME=${REPOSITORY_NAME} \
+		BRANCH_NAME=${BRANCH_NAME} \
+		REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
 	if [[ ${SERVICE_UP} == true ]]; then
-		make gh-load-folder \
-			GITHUB_TOKEN=${GITHUB_TOKEN} \
-			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-			ORGANIZATION_NAME=${ORGANIZATION_NAME} \
-			REPOSITORY_NAME=${REPOSITORY_NAME} \
-			BRANCH_NAME=${BRANCH_NAME} \
-			REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
 		make prepare-scraper-frontend-env \
 			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 			NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \

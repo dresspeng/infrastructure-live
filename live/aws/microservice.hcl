@@ -25,35 +25,11 @@ locals {
     }
   }
 
-  ec2_amis = {
-    linux_2 = {
-      x64   = { ami_ssm_architecture = "amazon-linux-2" }
-      arm64 = { ami_ssm_architecture = "amazon-linux-2-arm64" }
-      gpu   = { ami_ssm_architecture = "amazon-linux-2-gpu" }
-      inf   = { ami_ssm_architecture = "amazon-linux-2-inf" }
-    }
-    linux_2023 = {
-      x64   = { ami_ssm_architecture = "amazon-linux-2" }
-      arm64 = { ami_ssm_architecture = "amazon-linux-2-arm64" }
-      # gpu   = { ami_ssm_architecture = "amazon-linux-2-gpu" }
-      inf = { ami_ssm_architecture = "amazon-linux-2-inf" }
-    }
-  }
-
   # fargate const
   fargate_instances = {
     set_1 = {
       cpu    = 512
       memory = 1024
-    }
-  }
-
-  fargate_amis = {
-    linux = {
-      x64 = {
-        os           = "LINUX"
-        architecture = "X86_64"
-      }
     }
   }
 

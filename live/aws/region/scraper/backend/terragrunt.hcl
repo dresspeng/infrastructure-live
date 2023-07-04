@@ -25,13 +25,16 @@ locals {
   override_extension_name = local.service_vars.locals.override_extension_name
   common_name             = local.service_vars.locals.common_name
   # organization_name = local.service_vars.locals.organization_name
-  repository_name = local.service_vars.locals.repository_name
-  branch_name     = local.service_vars.locals.branch_name
-  use_fargate     = local.service_vars.locals.use_fargate
-  pricing_names   = local.service_vars.locals.pricing_names
-  os              = local.service_vars.locals.os
-  architecture    = local.service_vars.locals.architecture
-  service_count   = local.service_vars.locals.service_count
+  repository_name    = local.service_vars.locals.repository_name
+  branch_name        = local.service_vars.locals.branch_name
+  use_fargate        = local.service_vars.locals.use_fargate
+  pricing_names      = local.service_vars.locals.pricing_names
+  os                 = local.service_vars.locals.os
+  os_version         = local.service_vars.locals.os_version
+  architecture       = local.service_vars.locals.architecture
+  task_min_count     = local.service_vars.locals.task_min_count
+  task_desired_count = local.service_vars.locals.task_desired_count
+  task_max_count     = local.service_vars.locals.task_max_count
 
   config_vars = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
 
@@ -55,20 +58,18 @@ locals {
         EOT
     }
   }
-
   ec2_microservice = local.microservice_vars.locals.ec2
   ec2 = { for pricing_name in local.pricing_names :
     pricing_name => merge(
       local.ec2_microservice[pricing_name],
       {
-        user_data            = format("%s\n%s", local.ec2_microservice[pricing_name].user_data, local.ec2_user_data[pricing_name].user_data)
-        instance_type        = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].name
-        ami_ssm_architecture = local.microservice_vars.locals.ec2_amis["${local.service_vars.locals.os}_${local.service_vars.locals.os_version}"][local.service_vars.locals.architecture].ami_ssm_architecture
-        asg = merge(local.ec2_microservice[pricing_name].asg, {
-          min_size     = local.service_vars.locals.instance_min_count
-          desired_size = local.service_vars.locals.instance_desired_count
-          max_size     = local.service_vars.locals.instance_max_count
-        })
+        os           = local.service_vars.locals.os
+        os_version   = local.service_vars.locals.os_version
+        architecture = local.service_vars.locals.architecture
+      },
+      {
+        user_data     = format("%s\n%s", local.ec2_microservice[pricing_name].user_data, local.ec2_user_data[pricing_name].user_data)
+        instance_type = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].name
       }
     )
     if !local.use_fargate
@@ -79,8 +80,11 @@ locals {
   fargate = merge(
     local.fargate_microservice,
     {
-      os           = local.microservice_vars.locals.fargate_amis[local.service_vars.locals.os][local.service_vars.locals.architecture].os
-      architecture = local.microservice_vars.locals.fargate_amis[local.service_vars.locals.os][local.service_vars.locals.architecture].architecture
+      os = local.service_vars.locals.os
+      # os_version   = local.service_vars.locals.os_version
+      architecture = local.service_vars.locals.architecture
+    },
+    {
       capacity_provider = { for pricing_name in local.pricing_names :
         pricing_name => local.fargate_microservice.capacity_provider[pricing_name]
         if local.use_fargate
@@ -144,7 +148,9 @@ inputs = {
         local.microservice_vars.locals.ecs.service,
         {
           use_fargate        = local.use_fargate
-          task_desired_count = local.service_count
+          task_min_count     = local.task_min_count
+          task_desired_count = local.task_desired_count
+          task_max_count     = local.task_max_count
           deployment_circuit_breaker = local.use_fargate ? null : {
             enable   = true
             rollback = false
