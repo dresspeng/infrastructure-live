@@ -48,7 +48,7 @@ locals {
   }
   ec2_capacity_provider = {
     base                        = null # no preferred instance amount
-    weight_percent              = 50   # 50% chance
+    weight                      = 50   # 50% chance
     target_capacity_cpu_percent = 70
     maximum_scaling_step_size   = 1
     minimum_scaling_step_size   = 1
@@ -89,14 +89,14 @@ locals {
   fargate = {
     capacity_provider = {
       "${local.pricing_name_spot}" = {
-        key            = "FARGATE_SPOT"
-        base           = null # no preferred instance amount
-        weight_percent = 50   # 50% chance        
+        key    = "FARGATE_SPOT"
+        base   = null # no preferred instance amount
+        weight = 50   # 50% chance        
       }
       "${local.pricing_name_on_demand}" = {
-        key            = "FARGATE"
-        base           = null # no preferred instance amount
-        weight_percent = 50   # 50% chance        
+        key    = "FARGATE"
+        base   = null # no preferred instance amount
+        weight = 50   # 50% chance        
       }
     }
   }

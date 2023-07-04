@@ -213,12 +213,22 @@ prepare-microservice:
 		os_version 		= ${OS_VERSION}
 		architecture 	= ${ARCHITECTURE}
 	EOF
+	
+	if [[ ${USE_FARGATE} == true ]]; then
+		cat <<-EOF >> ${FILE}
+			fargate_instance_key = ${FARGATE_INSTANCE_KEY}
+		EOF
+	else
+		cat <<-EOF >> ${FILE}
+			ec2_instance_key = ${EC2_INSTANCE_KEY}
+		EOF
+	fi
 
 	if [[ ${SERVICE_UP} == true ]]; then
 		cat <<-EOF >> ${FILE}
 			task_min_count     = ${TASK_MIN_COUNT}
-  			task_desired_count = ${TASK_DESIRED_COUNT}
-  			task_max_count     = ${TASK_MAX_COUNT}
+			task_desired_count = ${TASK_DESIRED_COUNT}
+			task_max_count     = ${TASK_MAX_COUNT}
 		EOF
 	else
 		cat <<-EOF >> ${FILE}
