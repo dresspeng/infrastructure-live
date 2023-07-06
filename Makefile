@@ -160,7 +160,6 @@ prepare-convention:
 	cat <<-EOF > ${PATH_ABS_LIVE}/convention_${OVERRIDE_EXTENSION}.hcl 
 	locals {
 		organization_name			= "${ORGANIZATION_NAME}"
-		environment_name			= "${ENVIRONMENT_NAME}"
 		modules_git_host_name		= "${GIT_HOST}"
 		modules_organization_name	= "${ORGANIZATION_NAME}"
 		modules_repository_name		= "${PROJECT_NAME}-${SERVICE_NAME}"
@@ -174,6 +173,7 @@ prepare-convention:
 prepare-aws-account:
 	cat <<-EOF > ${PATH_ABS_AWS}/account_${OVERRIDE_EXTENSION}.hcl 
 	locals {
+		domain_name 			= "${DOMAIN_NAME}"
 		account_region_name		= "${AWS_REGION}"
 		account_name			= "${AWS_PROFILE}"
 		account_id				= "${AWS_ACCOUNT_ID}"
@@ -201,10 +201,13 @@ prepare-microservice:
 		override_extension_name	= "${OVERRIDE_EXTENSION}"
 		common_name 			= "${COMMON_NAME}"
 		# organization_name 	= "${ORGANIZATION_NAME}"
+		project_name 			= "${PROJECT_NAME}"
+		service_name 			= "${SERVICE_NAME}"
 		repository_name 		= "${PROJECT_NAME}-${SERVICE_NAME}"
 		branch_name 			= "${BRANCH_NAME}"
 		common_tags = {
 			"Git Microservice" 	= "${GIT_HOST}/${ORGANIZATION_NAME}/${PROJECT_NAME}-${SERVICE_NAME}@${BRANCH_NAME}"
+			"Project" 			= "${PROJECT_NAME}"
 			"Service" 			= "${SERVICE_NAME}"
 		}
 		use_fargate 	= ${USE_FARGATE}

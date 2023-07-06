@@ -6,25 +6,24 @@ locals {
   convention_vars   = read_terragrunt_config(find_in_parent_folders("convention_override.hcl"))
   account_vars      = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
   microservice_vars = read_terragrunt_config(find_in_parent_folders("microservice.hcl"))
-  project_vars      = read_terragrunt_config(find_in_parent_folders("project.hcl"))
   service_vars      = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
 
   organization_name         = local.convention_vars.locals.organization_name
-  environment_name          = local.convention_vars.locals.environment_name
   modules_git_host_name     = local.convention_vars.locals.modules_git_host_name
   modules_organization_name = local.convention_vars.locals.modules_organization_name
   modules_repository_name   = local.convention_vars.locals.modules_repository_name
   modules_branch_name       = local.convention_vars.locals.modules_branch_name
 
+  domain_name         = local.account_vars.locals.domain_name
   account_region_name = local.account_vars.locals.account_region_name
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  project_name = local.project_vars.locals.project_name
-
   override_extension_name = local.service_vars.locals.override_extension_name
   common_name             = local.service_vars.locals.common_name
   # organization_name = local.service_vars.locals.organization_name
+  project_name       = local.service_vars.locals.project_name
+  service_name       = local.service_vars.locals.service_name
   repository_name    = local.service_vars.locals.repository_name
   branch_name        = local.service_vars.locals.branch_name
   use_fargate        = local.service_vars.locals.use_fargate
@@ -114,7 +113,6 @@ inputs = {
   common_tags = merge(
     local.convention_vars.locals.common_tags,
     local.account_vars.locals.common_tags,
-    local.project_vars.locals.common_tags,
     local.service_vars.locals.common_tags,
   )
 
@@ -123,7 +121,16 @@ inputs = {
       name       = local.common_name
       cidr_ipv4  = "1.0.0.0/16"
       enable_nat = false
-      tier       = "Public"
+      tier       = "public"
+    }
+    route53 = {
+      zone = {
+        name = local.domain_name
+      }
+      record = {
+        extensions     = ["www"]
+        subdomain_name = format("%s%s", local.branch_name == "master" ? "" : "${local.branch_name}.", local.repository_name)
+      }
     }
 
     bucket_env = {
@@ -136,13 +143,24 @@ inputs = {
 
     ecs = merge(local.microservice_vars.locals.ecs, {
       traffic = {
-        listener_port             = 80
-        listener_protocol         = "http"
-        listener_protocol_version = "http"
-        target_port               = local.config_vars.port
-        target_protocol           = "http"
-        target_protocol_version   = "http"
-        health_check_path         = local.config_vars.healthCheckPath
+        listeners = [
+          {
+            port             = 80
+            protocol         = "http"
+            protocol_version = "http"
+          },
+          {
+            port             = 443
+            protocol         = "https"
+            protocol_version = "http"
+          }
+        ]
+        target = {
+          port              = local.config_vars.port
+          protocol          = "http"
+          protocol_version  = "http"
+          health_check_path = local.config_vars.healthCheckPath
+        }
       }
       service = merge(
         local.microservice_vars.locals.ecs.service,

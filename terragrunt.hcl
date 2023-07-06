@@ -1,13 +1,23 @@
 locals {
   convention_vars = read_terragrunt_config(find_in_parent_folders("convention_override.hcl"))
   account_vars    = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
+  service_vars    = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
 
   organization_name = local.convention_vars.locals.organization_name
-  environment_name  = local.convention_vars.locals.environment_name
 
   account_region_name = local.account_vars.locals.account_region_name
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
+
+  project_name = local.service_vars.locals.project_name
+  service_name = local.service_vars.locals.service_name
+  branch_name  = local.service_vars.locals.branch_name
+
+  tags = merge(
+    local.convention_vars.locals.common_tags,
+    local.account_vars.locals.common_tags,
+    local.service_vars.locals.common_tags,
+  )
 }
 
 # Generate version block
@@ -51,11 +61,13 @@ remote_state {
 
   backend = "s3"
   config = {
-    encrypt        = true
-    key            = "${path_relative_to_include()}/terraform.tfstate"
-    region         = local.account_region_name
-    bucket         = lower("${local.organization_name}-${local.environment_name}-terraform-state")
-    dynamodb_table = lower("${local.organization_name}-${local.environment_name}-terraform-locks")
+    encrypt             = true
+    key                 = "${path_relative_to_include()}/terraform.tfstate"
+    region              = local.account_region_name
+    bucket              = lower("${local.organization_name}-${local.project_name}-${local.service_name}-${local.branch_name}-tf-state")
+    dynamodb_table      = lower("${local.organization_name}-${local.project_name}-${local.service_name}-${local.branch_name}-tf-locks")
+    s3_bucket_tags      = local.tags
+    dynamodb_table_tags = local.tags
   }
 
   generate = {

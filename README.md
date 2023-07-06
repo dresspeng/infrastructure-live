@@ -83,6 +83,7 @@ AWS_ACCESS_KEY=***
 AWS_SECRET_KEY=***
 ENVIRONMENT_NAME=local or prod
 GITHUB_TOKEN=***GH_TERRA_TOKEN***
+DOMAIN_NAME=my-domain.com
 
 # scraper
 FLICKR_PRIVATE_KEY=123
@@ -92,36 +93,10 @@ UNSPLASH_PUBLIC_KEY=123
 PEXELS_PUBLIC_KEY=123
 ```
 
-#### production
+## vpc
+#### cidr
 
-[Github example](https://github.com/gruntwork-io/terragrunt-infrastructure-live-example/tree/c269da5101210b0dd9927ad480b9f7fc73720642/prod/us-east-1)
+- 1.0.0.0/16 scraper-backend
+- 2.0.0.0/16 scraper-frontend
 
-[Scraper](live/us-east-1/scraper/README.md)
-
-## variables
-
-Variables set in the file can be overridden at deployment:
-
-```shell
-terraform apply -var <var_to_change>=<new_value>
-```
-
-## cidr
-
-Using `/16` for CIDR blocks means that the last two parts of the adress are customizable for subnets.
-
-The recommendations are to use the first part of the CIDR for different VPCs projects. When ever there should be a clear abstraction, use a different number. The recommendation is to simply increment by 1 the value of the first value of the CIDR, e.g. `10.0.0.0/16` to `11.0.0.0/16`.
-
-The second part of the cidr block is reserved for replicas of an environment. It could be for another region, for a new environment. `10.0.0.0/16` to `10.1.0.0/16`
-
-
-To check the first and last ip of a CIDR block:
-
-```hcl
-cidrhost("192.168.0.0/16", 0)
-cidrhost("192.168.0.0/16", -1)
-```
-
-- 1.0.0.0/16 scraper test
-- 2.0.0.0/16 scraper production
-- 3.0.0.0/16 scraper non-production
+The second part is reserved for different regions for example.
