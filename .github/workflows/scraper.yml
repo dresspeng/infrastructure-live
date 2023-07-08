@@ -8,21 +8,14 @@ on:
         description: 'The environment to deploy to'
         required: true
         default: KookaS
-      event:
-        type: choice
-        description: 'Type of event'     
-        required: true
-        options:
-        - up
-        - down
       running:
         type: boolean
-        description: 'Type of event'     
+        description: 'Up and running'     
         required: true
         default: true
       use_fargate:
         type: boolean
-        description: 'EC2 vs Fargate'     
+        description: 'Use fargate'
         required: false
         default: false
       task_count:
