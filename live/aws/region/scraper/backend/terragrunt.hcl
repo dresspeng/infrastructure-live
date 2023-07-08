@@ -171,7 +171,7 @@ inputs = {
           task_max_count     = local.task_max_count
           deployment_circuit_breaker = local.use_fargate ? null : {
             enable   = true
-            rollback = false
+            rollback = true
           }
         }
       )

@@ -27,9 +27,13 @@ locals {
 
   # fargate const
   fargate_instances = {
-    set_1 = {
+    "cpu512_mib1024" = {
       cpu    = 512
       memory = 1024
+    }
+    cpu1024_mib2048 = {
+      cpu    = 1024
+      memory = 2048
     }
   }
 
