@@ -6,10 +6,10 @@ locals {
   convention_vars   = read_terragrunt_config(find_in_parent_folders("convention_override.hcl"))
   account_vars      = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
   microservice_vars = read_terragrunt_config(find_in_parent_folders("microservice.hcl"))
-  service_vars      = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
+  service_vars      = read_terragrunt_config("${get_terragrunt_dir()}/service.hcl")
+  service_tmp_vars  = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
 
   override_extension_name   = local.convention_vars.locals.override_extension_name
-  organization_name         = local.convention_vars.locals.organization_name
   modules_git_host_name     = local.convention_vars.locals.modules_git_host_name
   modules_organization_name = local.convention_vars.locals.modules_organization_name
   modules_repository_name   = local.convention_vars.locals.modules_repository_name
@@ -20,12 +20,14 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  common_name = local.service_vars.locals.common_name
-  # organization_name = local.service_vars.locals.organization_name
+  cidr_ipv4          = local.service_vars.locals.cidr_ipv4
+  vpc_tier           = local.service_vars.locals.vpc_tier
   project_name       = local.service_vars.locals.project_name
   service_name       = local.service_vars.locals.service_name
+  git_host_name      = local.service_vars.locals.git_host_name
+  organization_name  = local.service_vars.locals.organization_name
   repository_name    = local.service_vars.locals.repository_name
-  branch_name        = local.service_vars.locals.branch_name
+  image_tag          = local.service_vars.locals.image_tag
   use_fargate        = local.service_vars.locals.use_fargate
   pricing_names      = local.service_vars.locals.pricing_names
   os                 = local.service_vars.locals.os
@@ -34,6 +36,8 @@ locals {
   task_min_count     = local.service_vars.locals.task_min_count
   task_desired_count = local.service_vars.locals.task_desired_count
   task_max_count     = local.service_vars.locals.task_max_count
+
+  branch_name = local.service_tmp_vars.locals.branch_name
 
   config_vars = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
 
@@ -102,6 +106,8 @@ locals {
 
   env_key         = "${local.branch_name}.env"
   env_bucket_name = "${local.common_name}-env"
+
+  name = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}")
 }
 
 terraform {
@@ -109,19 +115,23 @@ terraform {
 }
 
 inputs = {
-  common_name = local.common_name
+  common_name = local.name
   common_tags = merge(
     local.convention_vars.locals.common_tags,
     local.account_vars.locals.common_tags,
     local.service_vars.locals.common_tags,
+    {
+      "Git Microservice" = "${local.git_host_name}/${local.organization_name}/${local.local.repository_name}@${local.local.branch_name}"
+      "Project"          = local.project_name
+      "Service"          = local.service_name
+    }
   )
 
   microservice = {
     vpc = {
-      name       = local.common_name
-      cidr_ipv4  = "1.0.0.0/16"
-      enable_nat = false
-      tier       = "public"
+      name      = local.common_name
+      cidr_ipv4 = local.cidr_ipv4
+      tier      = var.vpc_tier
     }
     route53 = {
       zone = {
@@ -181,8 +191,8 @@ inputs = {
         {
           env_bucket_name      = local.env_bucket_name,
           env_file_name        = local.env_key
-          repository_name      = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}")
-          repository_image_tag = "latest"
+          repository_name      = local.name
+          repository_image_tag = local.image_tag
         }
       )
       ec2     = local.ec2

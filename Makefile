@@ -100,19 +100,18 @@ gh-load-folder:
 		make gh-load-file \
 			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 			GITHUB_TOKEN=${GITHUB_TOKEN} \
-			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 			REPOSITORY_PATH="$$file" \
 			ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 			REPOSITORY_NAME=${REPOSITORY_NAME} \
 			BRANCH_NAME=${BRANCH_NAME}; \
     done
 gh-load-file:
-	curl -L -o ${OUTPUT_FOLDER}/$(shell basename ${REPOSITORY_PATH} | cut -d. -f1)_${OVERRIDE_EXTENSION}$(shell [[ "${REPOSITORY_PATH}" = *.* ]] && echo .$(shell basename ${REPOSITORY_PATH} | cut -d. -f2) || echo '') \
+	curl -L -o ${TERRAGRUNT_CONFIG_PATH}/$(shell basename ${REPOSITORY_PATH} | cut -d. -f1)_${OVERRIDE_EXTENSION}$(shell [[ "${REPOSITORY_PATH}" = *.* ]] && echo .$(shell basename ${REPOSITORY_PATH} | cut -d. -f2) || echo '') \
 			-H "Accept: application/vnd.github.v3.raw" \
 			-H "Authorization: Bearer ${GITHUB_TOKEN}" \
 			-H "X-GitHub-Api-Version: 2022-11-28" \
 			https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_PATH}?ref=${BRANCH_NAME}
-
 
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
@@ -120,22 +119,20 @@ prepare-terragrunt: ## Setup the environment
 	make prepare-aws-account OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
 .ONESHELL: prepare-account-aws
 prepare-convention:
-	$(eval GIT_HOST=github.com)
-	$(eval ORGANIZATION_NAME=KookaS)
-	$(eval PROJECT_NAME=infrastructure)
-	$(eval SERVICE_NAME=modules)
-	$(eval BRANCH_NAME=master)
+	$(eval MODULES_GIT_HOST=github.com)
+	$(eval MODULES_ORGANIZATION_NAME=KookaS)
+	$(eval MODULES_PROJECT_NAME=infrastructure)
+	$(eval MODULES_SERVICE_NAME=modules)
+	$(eval MODULES_BRANCH_NAME=master)
 	cat <<-EOF > ${PATH_ABS_LIVE}/convention_${OVERRIDE_EXTENSION}.hcl 
 	locals {
 		override_extension_name		= "${OVERRIDE_EXTENSION}"
-		organization_name			= "${ORGANIZATION_NAME}"
-		modules_git_host_name		= "${GIT_HOST}"
-		modules_organization_name	= "${ORGANIZATION_NAME}"
-		modules_repository_name		= "${PROJECT_NAME}-${SERVICE_NAME}"
-		modules_branch_name			= "${BRANCH_NAME}"
-		common_tags = {
-			"Git Module" 	= "${GIT_HOST}/${ORGANIZATION_NAME}/${PROJECT_NAME}-${SERVICE_NAME}@${BRANCH_NAME}"
-			"Environment" 	= "${ENVIRONMENT_NAME}"
+		modules_git_host_name		= "${MODULES_GIT_HOST}"
+		modules_organization_name	= "${MODULES_ORGANIZATION_NAME}"
+		modules_repository_name		= "${MODULES_PROJECT_NAME}-${MODULES_SERVICE_NAME}"
+		modules_branch_name			= "${MODULES_BRANCH_NAME}"
+		tags = {
+			"Git Module" 	= "${MODULES_GIT_HOST}/${MODULES_ORGANIZATION_NAME}/${MODULES_PROJECT_NAME}-${MODULES_SERVICE_NAME}@${MODULES_BRANCH_NAME}"
 		}
 	}
 	EOF
@@ -146,94 +143,36 @@ prepare-aws-account:
 		account_region_name		= "${AWS_REGION}"
 		account_name			= "${AWS_PROFILE}"
 		account_id				= "${AWS_ACCOUNT_ID}"
-		common_tags = {
+		tags = {
 			"Account" = "${AWS_PROFILE}"
 		}
 	}
 	EOF
 
-.ONESHELL: prepare-module-microservice-scraper-backend
 prepare-microservice:
-	$(eval FILE=${OUTPUT_FOLDER}/service_${OVERRIDE_EXTENSION}.hcl)
-	cat <<-EOF > ${FILE}
+	cat <<-EOF > ${TERRAGRUNT_CONFIG_PATH}/service_${OVERRIDE_EXTENSION}.hcl 
 	locals {
-		common_name 			= "${COMMON_NAME}"
-		# organization_name 	= "${ORGANIZATION_NAME}"
-		project_name 			= "${PROJECT_NAME}"
-		service_name 			= "${SERVICE_NAME}"
-		repository_name 		= "${PROJECT_NAME}-${SERVICE_NAME}"
-		branch_name 			= "${BRANCH_NAME}"
-		common_tags = {
-			"Git Microservice" 	= "${GIT_HOST}/${ORGANIZATION_NAME}/${PROJECT_NAME}-${SERVICE_NAME}@${BRANCH_NAME}"
-			"Project" 			= "${PROJECT_NAME}"
-			"Service" 			= "${SERVICE_NAME}"
-		}
-		use_fargate 	= ${USE_FARGATE}
-		pricing_names 	= ${PRICING_NAMES}
-		os 				= "${OS}"
-		os_version 		= "${OS_VERSION}"
-		architecture 	= "${ARCHITECTURE}"
+		branch_name = "${BRANCH_NAME}"
+	}
 	EOF
-	
-	if [[ ${USE_FARGATE} == true ]]; then
-		cat <<-EOF >> ${FILE}
-			fargate_instance_key = "${FARGATE_INSTANCE_KEY}"
-		EOF
-	else
-		cat <<-EOF >> ${FILE}
-			ec2_instance_key = "${EC2_INSTANCE_KEY}"
-		EOF
-	fi
-
-	if [[ ${SERVICE_UP} == true ]]; then
-		cat <<-EOF >> ${FILE}
-			task_min_count     = ${TASK_MIN_COUNT}
-			task_desired_count = ${TASK_DESIRED_COUNT}
-			task_max_count     = ${TASK_MAX_COUNT}
-		EOF
-	else
-		cat <<-EOF >> ${FILE}
-			task_min_count 		= 0
-			task_desired_count 	= 0
-			task_max_count 		= 0
-		EOF
-	fi
-
-	echo "}" >> ${FILE}
-	echo service_${OVERRIDE_EXTENSION}:::; cat ${FILE}
 
 .ONESHELL: prepare-scraper-backend
+BRANCH_NAME ?= master
 prepare-scraper-backend:
-	$(eval GIT_HOST=github.com)
-	$(eval ORGANIZATION_NAME=KookaS)
-	$(eval PROJECT_NAME=scraper)
-	$(eval SERVICE_NAME=backend)
-	$(eval REPOSITORY_CONFIG_PATH=config)
-	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
-	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
-	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
-	$(eval CLOUD_HOST=aws)
 	make prepare-microservice \
+		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		COMMON_NAME=${COMMON_NAME} \
-		GIT_HOST=${GIT_HOST} \
-		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
-		PROJECT_NAME=${PROJECT_NAME} \
-		SERVICE_NAME=${SERVICE_NAME} \
-		REPOSITORY_NAME=${REPOSITORY_NAME} \
-		BRANCH_NAME=${BRANCH_NAME} \
-		SERVICE_UP=${SERVICE_UP}
+		BRANCH_NAME=${BRANCH_NAME}
 	make gh-load-folder \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		GITHUB_TOKEN=${GITHUB_TOKEN} \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		BRANCH_NAME=${BRANCH_NAME} \
 		REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
 	make prepare-scraper-backend-env \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		COMMON_NAME=${COMMON_NAME} \
 		CLOUD_HOST=${CLOUD_HOST} \
 		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
@@ -242,9 +181,9 @@ prepare-scraper-backend:
 		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
 		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
 prepare-scraper-backend-env:
-	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
+	$(eval MAKEFILE=$(shell find ${TERRAGRUNT_CONFIG_PATH} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		COMMON_NAME=${COMMON_NAME} \
 		CLOUD_HOST=${CLOUD_HOST} \
 		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
@@ -254,40 +193,27 @@ prepare-scraper-backend-env:
 		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
 
 .ONESHELL: prepare-scraper-frontend
+BRANCH_NAME ?= master
 prepare-scraper-frontend:
-	$(eval GIT_HOST=github.com)
-	$(eval ORGANIZATION_NAME=KookaS)
-	$(eval PROJECT_NAME=scraper)
-	$(eval SERVICE_NAME=frontend)
-	$(eval REPOSITORY_CONFIG_PATH=config)
-	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
-	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
-	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
 	make prepare-microservice \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		COMMON_NAME=${COMMON_NAME} \
-		GIT_HOST=${GIT_HOST} \
-		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
-		PROJECT_NAME=${PROJECT_NAME} \
-		SERVICE_NAME=${SERVICE_NAME} \
-		REPOSITORY_NAME=${REPOSITORY_NAME} \
-		BRANCH_NAME=${BRANCH_NAME} \
-		SERVICE_UP=${SERVICE_UP}
+		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+		BRANCH_NAME=${BRANCH_NAME}
 	make gh-load-folder \
 		GITHUB_TOKEN=${GITHUB_TOKEN} \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		BRANCH_NAME=${BRANCH_NAME} \
 		REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
 	make prepare-scraper-frontend-env \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER}
+		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 prepare-scraper-frontend-env:
-	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
+	$(eval MAKEFILE=$(shell find ${TERRAGRUNT_CONFIG_PATH} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		PORT=$(shell yq eval '.port' ${OUTPUT_FOLDER}/config_${OVERRIDE_EXTENSION}.yml)
+		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+		PORT=$(shell yq eval '.port' ${TERRAGRUNT_CONFIG_PATH}/config_${OVERRIDE_EXTENSION}.yml)
 
 init:
 	terragrunt init --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
@@ -298,8 +224,8 @@ plan:
 	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -no-color -out=${OUTPUT_FILE} 2>&1
 apply:
 	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
-destroy-lb:
-	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs.module.elb
+destroy-ecs:
+	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs
 
 # it needs the tfstate files which are generated with apply
 graph:
