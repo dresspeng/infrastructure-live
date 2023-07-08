@@ -60,7 +60,6 @@ env:
   ENVIRONMENT_NAME: prod
   TERRAFORM_VERSION: 1.4.6
   TERRAGRUNT_VERSION: 0.45.17
-  ENVVV: ${{ inputs.environment }}
 
 jobs:
   ecr-publish:
@@ -183,18 +182,18 @@ jobs:
         run: |
           # SCRAPER_BACKEND_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
           # SCRAPER_FRONTEND_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-          scraper-prepare \
+          make scraper-prepare \
             SERVICE_UP=${{ inputs.running }} \
-            use_fargate=${{ inputs.use_fargate }} \
-            task_min_count=${{ fromJson(inputs.task_count).min}} \
-            task_desired_count=${{ fromJson(inputs.task_count).desired}} \
-            task_max_count=${{ fromJson(inputs.task_count).max}} \
-            pricing_names=${{ inputs.pricing_names }} \
-            ec2_instance_key=${{ inputs.ec2_instance_key }} \
-            fargate_instance_key=${{ inputs.fargate_instance_key }} \
-            os=${{ fromJson(inputs.instance_specs).os}} \
-            os_version=${{ fromJson(inputs.instance_specs).os_version}} \
-            arch=${{ fromJson(inputs.instance_specs).arch}} \
+            USE_FARGATE=${{ inputs.use_fargate }} \
+            TASK_MIN_COUNT=${{ fromJson(inputs.task_count).min}} \
+            TASK_DESIRED_COUNT=${{ fromJson(inputs.task_count).desired}} \
+            TASK_MAX_COUNT=${{ fromJson(inputs.task_count).max}} \
+            PRICING_NAMES=${{ inputs.pricing_names }} \
+            EC2_INSTANCE_KEY=${{ inputs.ec2_instance_key }} \
+            FARGATE_INSTANCE_KEY=${{ inputs.fargate_instance_key }} \
+            OS=${{ fromJson(inputs.instance_specs).os}} \
+            OS_VERSION=${{ fromJson(inputs.instance_specs).os_version}} \
+            ARCHITECTURE=${{ fromJson(inputs.instance_specs).arch}} \
             FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
             FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
             UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
