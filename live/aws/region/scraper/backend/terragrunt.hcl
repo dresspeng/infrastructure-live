@@ -8,7 +8,7 @@ locals {
   microservice_vars = read_terragrunt_config(find_in_parent_folders("microservice.hcl"))
   service_vars      = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
 
-  override_extension_name = local.service_vars.locals.override_extension_name
+  override_extension_name   = local.convention_vars.locals.override_extension_name
   organization_name         = local.convention_vars.locals.organization_name
   modules_git_host_name     = local.convention_vars.locals.modules_git_host_name
   modules_organization_name = local.convention_vars.locals.modules_organization_name
@@ -20,7 +20,7 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  common_name             = local.service_vars.locals.common_name
+  common_name = local.service_vars.locals.common_name
   # organization_name = local.service_vars.locals.organization_name
   project_name       = local.service_vars.locals.project_name
   service_name       = local.service_vars.locals.service_name
