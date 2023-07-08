@@ -33,6 +33,7 @@ fmt: ## Format all files
 .ONESHELL: clean
 clean: ## Clean the test environment
 	make nuke-region
+	make nuke-vpc
 	make nuke-global
 
 	make clean-task-definition
@@ -62,6 +63,8 @@ clean-ecs:
 
 nuke-region:
 	cloud-nuke aws --region ${AWS_REGION} --config .gruntwork/cloud-nuke/config.yaml --force;
+nuke-vpc:
+	cloud-nuke aws --region ${AWS_REGION} --resource-type vpc --force;
 nuke-global:
 	cloud-nuke aws --region global --config .gruntwork/cloud-nuke/config.yaml --force;
 
@@ -95,6 +98,7 @@ gh-load-folder:
 	for file in ${res}; do
 		echo GET Github file:: "$$file"; \
 		make gh-load-file \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 			GITHUB_TOKEN=${GITHUB_TOKEN} \
 			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 			REPOSITORY_PATH="$$file" \
@@ -116,17 +120,58 @@ SERVICE_UP ?= true
 .ONESHELL: set-scraper
 scraper-prepare:
 	make prepare-terragrunt OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
+
+	$(eval GIT_HOST=github.com)
+	$(eval ORGANIZATION_NAME=KookaS)
+	$(eval PROJECT_NAME=scraper)
+	$(eval SERVICE_NAME=backend)
+	$(eval REPOSITORY_CONFIG_PATH=config)
+	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
+	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
+	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
+	$(eval CLOUD_HOST=aws)
 	make prepare-scraper-backend \
 		GITHUB_TOKEN=${GITHUB_TOKEN} \
+		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		COMMON_NAME=${COMMON_NAME} \
+		GIT_HOST=${GIT_HOST} \
+		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+		PROJECT_NAME=${PROJECT_NAME} \
+		SERVICE_NAME=${SERVICE_NAME} \
+		REPOSITORY_NAME=${REPOSITORY_NAME} \
+		CLOUD_HOST=${CLOUD_HOST} \
 		BRANCH_NAME=${SCRAPER_BACKEND_BRANCH_NAME} \
 		SERVICE_UP=${SERVICE_UP} \
+		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
 		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
 		FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
 		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
 		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
 		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
-	# TODO: extract backend dns
-	# make prepare-scraper-frontend GITHUB_TOKEN=${GITHUB_TOKEN} BRANCH_NAME=${SCRAPER_FRONTEND_BRANCH_NAME} SERVICE_UP={SERVICE_UP}
+
+	cat ${OUTPUT_FOLDER}/terraform.tfstate
+
+	$(eval GIT_HOST=github.com)
+	$(eval ORGANIZATION_NAME=KookaS)
+	$(eval PROJECT_NAME=scraper)
+	$(eval SERVICE_NAME=frontend)
+	$(eval REPOSITORY_CONFIG_PATH=config)
+	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
+	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
+	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
+	# make prepare-scraper-frontend \
+		GITHUB_TOKEN=${GITHUB_TOKEN} \
+		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		COMMON_NAME=${COMMON_NAME} \
+		GIT_HOST=${GIT_HOST} \
+		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+		PROJECT_NAME=${PROJECT_NAME} \
+		SERVICE_NAME=${SERVICE_NAME} \
+		REPOSITORY_NAME=${REPOSITORY_NAME} \
+		BRANCH_NAME=${SCRAPER_FRONTEND_BRANCH_NAME} \
+		SERVICE_UP=${SERVICE_UP} \
+		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+		NEXT_PUBLIC_API_URL=$(shell terraform show -json ${OUTPUT_FOLDER}/terraform.tfstate | jq '.outputs.microservice.value.ecs.elb.lb_dns_name')
 scraper-init:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
 	terragrunt init --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
@@ -245,16 +290,8 @@ prepare-microservice:
 .ONESHELL: prepare-scraper-backend
 BRANCH_NAME ?= master
 prepare-scraper-backend:
-	$(eval GIT_HOST=github.com)
-	$(eval ORGANIZATION_NAME=KookaS)
-	$(eval PROJECT_NAME=scraper)
-	$(eval SERVICE_NAME=backend)
-	$(eval REPOSITORY_CONFIG_PATH=config)
-	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
-	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
-	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
-	$(eval CLOUD_HOST=aws)
 	make prepare-microservice \
+		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		COMMON_NAME=${COMMON_NAME} \
 		GIT_HOST=${GIT_HOST} \
@@ -265,23 +302,22 @@ prepare-scraper-backend:
 		BRANCH_NAME=${BRANCH_NAME} \
 		SERVICE_UP=${SERVICE_UP}
 	make gh-load-folder \
+		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		GITHUB_TOKEN=${GITHUB_TOKEN} \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		BRANCH_NAME=${BRANCH_NAME} \
 		REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
-	if [[ ${SERVICE_UP} == true ]]; then
-		make prepare-scraper-backend-env \
-			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-			COMMON_NAME=${COMMON_NAME} \
-			CLOUD_HOST=${CLOUD_HOST} \
-			FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
-			FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
-			UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
-			UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
-			PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
-	fi
+	make prepare-scraper-backend-env \
+		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		COMMON_NAME=${COMMON_NAME} \
+		CLOUD_HOST=${CLOUD_HOST} \
+		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
+		FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
+		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
+		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
+		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
 prepare-scraper-backend-env:
 	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
@@ -297,14 +333,6 @@ prepare-scraper-backend-env:
 .ONESHELL: prepare-scraper-frontend
 BRANCH_NAME ?= master
 prepare-scraper-frontend:
-	$(eval GIT_HOST=github.com)
-	$(eval ORGANIZATION_NAME=KookaS)
-	$(eval PROJECT_NAME=scraper)
-	$(eval SERVICE_NAME=frontend)
-	$(eval REPOSITORY_CONFIG_PATH=config)
-	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
-	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
-	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
 	make prepare-microservice \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		COMMON_NAME=${COMMON_NAME} \
@@ -322,18 +350,17 @@ prepare-scraper-frontend:
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		BRANCH_NAME=${BRANCH_NAME} \
 		REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
-	if [[ ${SERVICE_UP} == true ]]; then
-		make prepare-scraper-frontend-env \
-			OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-			NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
-			FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY}
-	fi
+	make prepare-scraper-frontend-env \
+		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
+		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY}
 prepare-scraper-frontend-env:
 	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
-		PORT=3000
+		PORT=$(yq eval '.port' ${OUTPUT_FOLDER}/config_${OVERRIDE_EXTENSION}.yml)
 
 # it needs the tfstate files which are generated with apply
 graph:

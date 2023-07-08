@@ -264,7 +264,7 @@ jobs:
       - name: Terragrunt apply
         if: github.event_name == 'workflow_dispatch'
         run: |
-          make scraper-apply
+          make scraper-apply          
           if [[ "${{ inputs.running }}" == "false" ]]; then
             make scraper-remove-lb
           fi
