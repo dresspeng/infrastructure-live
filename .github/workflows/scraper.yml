@@ -4,16 +4,51 @@ on:
   workflow_dispatch:
     inputs:
       environment:
+        type: environment
         description: 'The environment to deploy to'
-        required: false
-        default: KookaS
-      event:
-        type: choice
-        description: 'Type of event'     
         required: true
+        default: KookaS
+      running:
+        type: boolean
+        description: 'Up and running'     
+        required: true
+        default: true
+      use_fargate:
+        type: boolean
+        description: 'Use fargate'
+        required: false
+        default: false
+      task_count:
+        type: string
+        description: 'count of ECS tasks'     
+        required: false
+        default: '{ "min": 0, "desired": 1, "max": 1 }'
+      pricing_names:
+        type: string
+        description: 'pricings: [on-demand, spot]'     
+        required: false
+        default: '["on-demand"]'
+      ec2_instance_key:
+        type: choice
+        description: 'ec2 instance type'     
+        required: false
         options:
-        - up
-        - down
+          - t3_small
+          - t3_medium
+        default: t3_small
+      fargate_instance_key:
+        type: choice
+        description: 'fargate instance type'     
+        required: false
+        options:
+          - cpu512_mib1024
+          - cpu1024_mib2048
+        default: cpu512_mib1024
+      instance_specs: 
+        type: string
+        description: 'operating system and architecture'     
+        required: false
+        default: '{ "os": "linux", "os_version": "2023", "arch": "x64" }'
   push:
     branches-ignore: [dependabot/**]
   pull_request:
@@ -30,7 +65,7 @@ jobs:
   ecr-publish:
     name: ECR publish steps
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'KookaS' }}
+    environment: ${{ inputs.environment }}
     env:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       AWS_REGION: ${{ vars.AWS_REGION }}
@@ -147,17 +182,23 @@ jobs:
         run: |
           # SCRAPER_BACKEND_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
           # SCRAPER_FRONTEND_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-          if [[ "${{ inputs.event }}" == "down" ]]; then
-            make scraper-prepare SERVICE_UP=false
-          else
-            make scraper-prepare \
-              SERVICE_UP=true \
-              FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
-              FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
-              UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
-              UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
-              PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
-          fi
+          scraper-prepare \
+            SERVICE_UP=${{ inputs.running }} \
+            use_fargate=${{ inputs.use_fargate }} \
+            task_min_count=${{ fromJson(inputs.task_count).min}} \
+            task_desired_count=${{ fromJson(inputs.task_count).desired}} \
+            task_max_count=${{ fromJson(inputs.task_count).max}} \
+            pricing_names=${{ inputs.pricing_names }} \
+            ec2_instance_key=${{ inputs.ec2_instance_key }} \
+            fargate_instance_key=${{ inputs.fargate_instance_key }} \
+            os=${{ fromJson(inputs.instance_specs).os}} \
+            os_version=${{ fromJson(inputs.instance_specs).os_version}} \
+            arch=${{ fromJson(inputs.instance_specs).arch}} \
+            FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
+            FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
+            UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
+            UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
+            PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
 
       - name: Terragrunt init
         id: init
@@ -224,6 +265,6 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           make scraper-apply
-          if [[ "${{ inputs.event }}" == "down" ]]; then
+          if [[ "${{ inputs.running }}" == "false" ]]; then
             make scraper-remove-lb
           fi

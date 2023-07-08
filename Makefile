@@ -186,8 +186,8 @@ prepare-aws-account:
 .ONESHELL: prepare-module-microservice-scraper-backend
 USE_FARGATE ?= false
 TASK_MIN_COUNT ?= 0
-TASK_DESIRED_COUNT ?= 1
-TASK_MAX_COUNT ?= 1
+TASK_DESIRED_COUNT ?= 2
+TASK_MAX_COUNT ?= 2
 PRICING_NAMES ?= ["on-demand"]
 EC2_INSTANCE_KEY ?= "t3_small"
 FARGATE_INSTANCE_KEY ?= "set_1"
