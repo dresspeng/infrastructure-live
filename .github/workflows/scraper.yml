@@ -66,7 +66,7 @@ jobs:
   ecr-publish:
     name: ECR publish steps
     runs-on: ubuntu-latest
-    # environment: ${{ inputs.environment }}
+    environment: ${{ inputs.environment }}
     env:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       AWS_REGION: ${{ vars.AWS_REGION }}
