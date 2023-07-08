@@ -5,7 +5,7 @@ ARG VARIANT=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$AWS_ECR_REPOSITOR
 
 FROM ${VARIANT}
 
-RUN sudo apk add --no-cache curl jq openssh
+RUN sudo apk add --no-cache curl jq yq openssh
 
 ARG USERNAME=user
 ARG USER_UID=1001

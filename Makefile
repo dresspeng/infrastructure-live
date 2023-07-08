@@ -114,85 +114,6 @@ gh-load-file:
 			https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_PATH}?ref=${BRANCH_NAME}
 
 
-SCRAPER_BACKEND_BRANCH_NAME ?= master
-SCRAPER_FRONTEND_BRANCH_NAME ?= master
-SERVICE_UP ?= true
-.ONESHELL: set-scraper
-scraper-prepare:
-	make prepare-terragrunt OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
-
-	$(eval GIT_HOST=github.com)
-	$(eval ORGANIZATION_NAME=KookaS)
-	$(eval PROJECT_NAME=scraper)
-	$(eval SERVICE_NAME=backend)
-	$(eval REPOSITORY_CONFIG_PATH=config)
-	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
-	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
-	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
-	$(eval CLOUD_HOST=aws)
-	make prepare-scraper-backend \
-		GITHUB_TOKEN=${GITHUB_TOKEN} \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		COMMON_NAME=${COMMON_NAME} \
-		GIT_HOST=${GIT_HOST} \
-		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
-		PROJECT_NAME=${PROJECT_NAME} \
-		SERVICE_NAME=${SERVICE_NAME} \
-		REPOSITORY_CONFIG_PATH=${REPOSITORY_CONFIG_PATH} \
-		REPOSITORY_NAME=${REPOSITORY_NAME} \
-		CLOUD_HOST=${CLOUD_HOST} \
-		BRANCH_NAME=${SCRAPER_BACKEND_BRANCH_NAME} \
-		SERVICE_UP=${SERVICE_UP} \
-		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
-		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
-		FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
-		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
-		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
-		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
-
-	cat ${OUTPUT_FOLDER}/terraform.tfstate
-	NEXT_PUBLIC_API_URL=$(shell terragrunt output --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs.module.elb.lb_dns_name)
-	echo NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-
-	$(eval GIT_HOST=github.com)
-	$(eval ORGANIZATION_NAME=KookaS)
-	$(eval PROJECT_NAME=scraper)
-	$(eval SERVICE_NAME=frontend)
-	$(eval REPOSITORY_CONFIG_PATH=config)
-	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
-	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
-	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
-	# make prepare-scraper-frontend \
-		GITHUB_TOKEN=${GITHUB_TOKEN} \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		COMMON_NAME=${COMMON_NAME} \
-		GIT_HOST=${GIT_HOST} \
-		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
-		PROJECT_NAME=${PROJECT_NAME} \
-		SERVICE_NAME=${SERVICE_NAME} \
-		REPOSITORY_CONFIG_PATH=${REPOSITORY_CONFIG_PATH} \
-		REPOSITORY_NAME=${REPOSITORY_NAME} \
-		BRANCH_NAME=${SCRAPER_FRONTEND_BRANCH_NAME} \
-		SERVICE_UP=${SERVICE_UP} \
-		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-scraper-init:
-	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
-	terragrunt init --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
-scraper-validate:
-	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
-	terragrunt validate --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
-scraper-plan:
-	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
-	# -lock=false
-	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -no-color -out=${OUTPUT_FILE} 2>&1
-scraper-apply:
-	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
-	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
-scraper-remove-lb:
-	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
-	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs.module.elb
-
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
 	make prepare-convention OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
@@ -232,6 +153,7 @@ prepare-aws-account:
 	EOF
 
 .ONESHELL: prepare-module-microservice-scraper-backend
+SERVICE_UP ?= true
 USE_FARGATE ?= false
 TASK_MIN_COUNT ?= 0
 TASK_DESIRED_COUNT ?= 2
@@ -294,6 +216,15 @@ prepare-microservice:
 .ONESHELL: prepare-scraper-backend
 BRANCH_NAME ?= master
 prepare-scraper-backend:
+	$(eval GIT_HOST=github.com)
+	$(eval ORGANIZATION_NAME=KookaS)
+	$(eval PROJECT_NAME=scraper)
+	$(eval SERVICE_NAME=backend)
+	$(eval REPOSITORY_CONFIG_PATH=config)
+	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
+	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
+	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
+	$(eval CLOUD_HOST=aws)
 	make prepare-microservice \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
@@ -337,6 +268,14 @@ prepare-scraper-backend-env:
 .ONESHELL: prepare-scraper-frontend
 BRANCH_NAME ?= master
 prepare-scraper-frontend:
+	$(eval GIT_HOST=github.com)
+	$(eval ORGANIZATION_NAME=KookaS)
+	$(eval PROJECT_NAME=scraper)
+	$(eval SERVICE_NAME=frontend)
+	$(eval REPOSITORY_CONFIG_PATH=config)
+	$(eval REPOSITORY_NAME=${PROJECT_NAME}-${SERVICE_NAME})
+	$(eval OUTPUT_FOLDER=${PATH_ABS_AWS}/region/${PROJECT_NAME}/${SERVICE_NAME})
+	$(eval COMMON_NAME=$(shell echo ${PROJECT_NAME}-${SERVICE_NAME}-${BRANCH_NAME}-${ENVIRONMENT_NAME} | tr A-Z a-z))
 	make prepare-microservice \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
 		COMMON_NAME=${COMMON_NAME} \
@@ -356,15 +295,24 @@ prepare-scraper-frontend:
 		REPOSITORY_PATH=${REPOSITORY_CONFIG_PATH}
 	make prepare-scraper-frontend-env \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
-		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY}
+		OUTPUT_FOLDER=${OUTPUT_FOLDER}
 prepare-scraper-frontend-env:
 	$(eval MAKEFILE=$(shell find ${OUTPUT_FOLDER} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
 		OUTPUT_FOLDER=${OUTPUT_FOLDER} \
-		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
-		PORT=$(yq eval '.port' ${OUTPUT_FOLDER}/config_${OVERRIDE_EXTENSION}.yml)
+		PORT=$(shell yq eval '.port' ${OUTPUT_FOLDER}/config_${OVERRIDE_EXTENSION}.yml)
+
+init:
+	terragrunt init --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+validate:
+	terragrunt validate --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+plan:
+	# -lock=false
+	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -no-color -out=${OUTPUT_FILE} 2>&1
+apply:
+	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+destroy-lb:
+	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs.module.elb
 
 # it needs the tfstate files which are generated with apply
 graph:

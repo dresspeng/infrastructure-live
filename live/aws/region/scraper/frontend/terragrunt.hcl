@@ -2,6 +2,10 @@ include {
   path = find_in_parent_folders()
 }
 
+dependency "backend" {
+  config_path = "../backend"
+}
+
 locals {
   convention_vars   = read_terragrunt_config(find_in_parent_folders("convention_override.hcl"))
   account_vars      = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
@@ -100,6 +104,7 @@ locals {
     memory_reservation = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].memory_allowed - local.microservice_vars.locals.ecs_reserved_memory
   }
 
+  tmp             = run_cmd("echo", "\"NEXT_PUBLIC_API_URL=${dependency.backend.outputs.microservice.ecs.elb.lb_dns_name}\"", "${local.override_extension_name}.env")
   env_key         = "${local.branch_name}.env"
   env_bucket_name = "${local.common_name}-env"
 }
@@ -187,22 +192,7 @@ inputs = {
       )
       ec2     = local.ec2
       fargate = local.fargate
-      },
+      }
     )
-  }
-
-  dynamodb_tables = [for table in local.config_vars.dynamodb : {
-    name                 = table.name
-    primary_key_name     = table.primaryKeyName
-    primary_key_type     = table.primaryKeyType
-    sort_key_name        = table.sortKeyName
-    sort_key_type        = table.sortKeyType
-    predictable_workload = false
-  }]
-
-  bucket_picture = {
-    name          = "${local.common_name}-${local.config_vars.buckets.picture.name}"
-    force_destroy = false
-    versioning    = true
   }
 }
