@@ -17,8 +17,6 @@ PATH_REL_AWS=live/aws
 PATH_ABS_AWS=${PATH_ABS_ROOT}/${PATH_REL_AWS}
 
 OVERRIDE_EXTENSION=override
-export OVERRIDE_EXTENSION
-export AWS_REGION AWS_PROFILE AWS_ACCOUNT_ID AWS_ACCESS_KEY AWS_SECRET_KEY ENVIRONMENT_NAME GITHUB_TOKEN
 
 .SILENT:	# silent all commands below
 # https://www.gnu.org/software/make/manual/html_node/Options-Summary.html
@@ -159,6 +157,7 @@ prepare-convention:
 	$(eval BRANCH_NAME=master)
 	cat <<-EOF > ${PATH_ABS_LIVE}/convention_${OVERRIDE_EXTENSION}.hcl 
 	locals {
+		override_extension_name		= "${OVERRIDE_EXTENSION}"
 		organization_name			= "${ORGANIZATION_NAME}"
 		modules_git_host_name		= "${GIT_HOST}"
 		modules_organization_name	= "${ORGANIZATION_NAME}"
@@ -198,7 +197,6 @@ prepare-microservice:
 	$(eval FILE=${OUTPUT_FOLDER}/service_${OVERRIDE_EXTENSION}.hcl)
 	cat <<-EOF > ${FILE}
 	locals {
-		override_extension_name	= "${OVERRIDE_EXTENSION}"
 		common_name 			= "${COMMON_NAME}"
 		# organization_name 	= "${ORGANIZATION_NAME}"
 		project_name 			= "${PROJECT_NAME}"
