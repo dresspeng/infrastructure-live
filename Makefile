@@ -210,18 +210,18 @@ prepare-microservice:
 		}
 		use_fargate 	= ${USE_FARGATE}
 		pricing_names 	= ${PRICING_NAMES}
-		os 				= ${OS}
-		os_version 		= ${OS_VERSION}
-		architecture 	= ${ARCHITECTURE}
+		os 				= "${OS}"
+		os_version 		= "${OS_VERSION}"
+		architecture 	= "${ARCHITECTURE}"
 	EOF
 	
 	if [[ ${USE_FARGATE} == true ]]; then
 		cat <<-EOF >> ${FILE}
-			fargate_instance_key = ${FARGATE_INSTANCE_KEY}
+			fargate_instance_key = "${FARGATE_INSTANCE_KEY}"
 		EOF
 	else
 		cat <<-EOF >> ${FILE}
-			ec2_instance_key = ${EC2_INSTANCE_KEY}
+			ec2_instance_key = "${EC2_INSTANCE_KEY}"
 		EOF
 	fi
 
