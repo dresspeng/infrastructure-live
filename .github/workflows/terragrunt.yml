@@ -41,15 +41,12 @@ on:
                 required: true     
 
 env:
-    AWS_CLI_SERVICE: ecr
-    ECR_IMAGE_TAG: latest
-    ENVIRONMENT_NAME: prod
     TERRAFORM_VERSION: 1.4.6
     TERRAGRUNT_VERSION: 0.45.17
 
 jobs:
-  ecr-publish:
-    name: ECR publish steps
+  deployment:
+    name: Deployment
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     env:
@@ -73,6 +70,8 @@ jobs:
       # - name: Login to ECR
       #   env:
       #     ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+      #     AWS_CLI_SERVICE: ecr
+      #     ECR_IMAGE_TAG: latest
       #   run: |
       #     if [[ $AWS_CLI_SERVICE == ecr ]]; then
       #       aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URI

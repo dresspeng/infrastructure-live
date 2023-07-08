@@ -153,17 +153,6 @@ prepare-aws-account:
 	EOF
 
 .ONESHELL: prepare-module-microservice-scraper-backend
-SERVICE_UP ?= true
-USE_FARGATE ?= false
-TASK_MIN_COUNT ?= 0
-TASK_DESIRED_COUNT ?= 2
-TASK_MAX_COUNT ?= 2
-PRICING_NAMES ?= ["on-demand"]
-EC2_INSTANCE_KEY ?= "t3_small"
-FARGATE_INSTANCE_KEY ?= "set_1"
-OS ?= "linux"
-OS_VERSION ?= "2023"
-ARCHITECTURE ?= "x64"
 prepare-microservice:
 	$(eval FILE=${OUTPUT_FOLDER}/service_${OVERRIDE_EXTENSION}.hcl)
 	cat <<-EOF > ${FILE}
@@ -214,7 +203,6 @@ prepare-microservice:
 	echo service_${OVERRIDE_EXTENSION}:::; cat ${FILE}
 
 .ONESHELL: prepare-scraper-backend
-BRANCH_NAME ?= master
 prepare-scraper-backend:
 	$(eval GIT_HOST=github.com)
 	$(eval ORGANIZATION_NAME=KookaS)
@@ -266,7 +254,6 @@ prepare-scraper-backend-env:
 		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
 
 .ONESHELL: prepare-scraper-frontend
-BRANCH_NAME ?= master
 prepare-scraper-frontend:
 	$(eval GIT_HOST=github.com)
 	$(eval ORGANIZATION_NAME=KookaS)
