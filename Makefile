@@ -138,6 +138,7 @@ scraper-prepare:
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		PROJECT_NAME=${PROJECT_NAME} \
 		SERVICE_NAME=${SERVICE_NAME} \
+		REPOSITORY_CONFIG_PATH=${REPOSITORY_CONFIG_PATH} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		CLOUD_HOST=${CLOUD_HOST} \
 		BRANCH_NAME=${SCRAPER_BACKEND_BRANCH_NAME} \
@@ -150,6 +151,8 @@ scraper-prepare:
 		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
 
 	cat ${OUTPUT_FOLDER}/terraform.tfstate
+	NEXT_PUBLIC_API_URL=$(shell terragrunt output --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs.module.elb.lb_dns_name)
+	echo NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 	$(eval GIT_HOST=github.com)
 	$(eval ORGANIZATION_NAME=KookaS)
@@ -167,11 +170,12 @@ scraper-prepare:
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		PROJECT_NAME=${PROJECT_NAME} \
 		SERVICE_NAME=${SERVICE_NAME} \
+		REPOSITORY_CONFIG_PATH=${REPOSITORY_CONFIG_PATH} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		BRANCH_NAME=${SCRAPER_FRONTEND_BRANCH_NAME} \
 		SERVICE_UP=${SERVICE_UP} \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-		NEXT_PUBLIC_API_URL=$(shell terraform show -json ${OUTPUT_FOLDER}/terraform.tfstate | jq '.outputs.microservice.value.ecs.elb.lb_dns_name')
+		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 scraper-init:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
 	terragrunt init --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
@@ -187,7 +191,7 @@ scraper-apply:
 	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
 scraper-remove-lb:
 	$(eval SRC_FOLDER=${PATH_ABS_AWS}/region/scraper/backend)
-	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs.module.alb
+	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs.module.elb
 
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
