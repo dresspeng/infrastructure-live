@@ -60,12 +60,13 @@ env:
   ENVIRONMENT_NAME: prod
   TERRAFORM_VERSION: 1.4.6
   TERRAGRUNT_VERSION: 0.45.17
+  ENVVV: ${{ inputs.environment }}
 
 jobs:
   ecr-publish:
     name: ECR publish steps
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    # environment: ${{ inputs.environment }}
     env:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       AWS_REGION: ${{ vars.AWS_REGION }}
