@@ -24,7 +24,7 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  common_name = local.service_vars.locals.common_name
+  common_name        = local.service_vars.locals.common_name
   repository_name    = local.service_vars.locals.repository_name
   branch_name        = local.service_vars.locals.branch_name
   use_fargate        = local.service_vars.locals.use_fargate
@@ -101,8 +101,9 @@ locals {
     memory_reservation = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].memory_allowed - local.microservice_vars.locals.ecs_reserved_memory
   }
 
-  tmp             = run_cmd("echo", "\"NEXT_PUBLIC_API_URL=${dependency.backend.outputs.microservice.ecs.elb.lb_dns_name}\"", "${local.override_extension_name}.env")
   env_key         = "${local.branch_name}.env"
+  env_local_path  = "${local.override_extension_name}.env"
+  env_var         = run_cmd("echo", "\"NEXT_PUBLIC_API_URL=${dependency.backend.outputs.microservice.ecs.elb.lb_dns_name}\"", local.env_local_path)
   env_bucket_name = "${local.common_name}-env"
 }
 

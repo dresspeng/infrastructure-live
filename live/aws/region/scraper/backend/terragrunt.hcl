@@ -105,6 +105,8 @@ locals {
   }
 
   env_key         = "${local.branch_name}.env"
+  env_local_path  = "${local.override_extension_name}.env"
+  env_var         = run_cmd("echo", "\"COMMON_NAME=${local.name}\"", local.env_local_path)
   env_bucket_name = "${local.common_name}-env"
 
   name = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}")
@@ -146,7 +148,7 @@ inputs = {
     bucket_env = {
       name          = local.env_bucket_name
       file_key      = local.env_key
-      file_path     = "${path_relative_to_include()}/${local.override_extension_name}.env"
+      file_path     = "${path_relative_to_include()}/${local.env_local_path}"
       force_destroy = false
       versioning    = true
     }
