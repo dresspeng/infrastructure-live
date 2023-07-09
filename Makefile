@@ -94,29 +94,6 @@ gh-list-branches:
 		-H "X-GitHub-Api-Version: 2022-11-28" \
 		https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/branches | jq '.[].name'
 .ONESHELL: gh-load-folder
-gh-load-folder-branch-check:
-	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
-	$(eval branches=$(shell make gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
-	if [[ '$(shell echo ${branches} | grep -o ${BRANCH_NAME} | wc -l)' == '0' ]]; then
-		$(eval BRANCH_NAME=${DEFAULT_BRANCH_NAME})
-		make gh-load-folder \
-			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-			GITHUB_TOKEN=${GITHUB_TOKEN} \
-			REPOSITORY_CONFIG_PATH_FOLDER=${REPOSITORY_CONFIG_PATH_FOLDER} \
-			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
-			ORGANIZATION_NAME=${ORGANIZATION_NAME} \
-			REPOSITORY_NAME=${REPOSITORY_NAME} \
-			BRANCH_NAME=${DEFAULT_BRANCH_NAME} 
-	else
-		make gh-load-folder \
-			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-			GITHUB_TOKEN=${GITHUB_TOKEN} \
-			REPOSITORY_CONFIG_PATH_FOLDER=${REPOSITORY_CONFIG_PATH_FOLDER} \
-			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
-			ORGANIZATION_NAME=${ORGANIZATION_NAME} \
-			REPOSITORY_NAME=${REPOSITORY_NAME} \
-			BRANCH_NAME=${BRANCH_NAME} 
-	fi
 gh-load-folder:
 	echo GET Github folder:: ${REPOSITORY_CONFIG_PATH_FOLDER}@${BRANCH_NAME}
 	$(eval filesPath=$(shell curl -s -L \
@@ -125,7 +102,7 @@ gh-load-folder:
 		-H "X-GitHub-Api-Version: 2022-11-28" \
 		https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_CONFIG_PATH_FOLDER}?ref=${BRANCH_NAME} | jq -c '.[].path'))
 	for filePath in ${filesPath}; do		
-		make gh-load-file \
+		make gh-load-config-file \
 			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 			GITHUB_TOKEN=${GITHUB_TOKEN} \
 			REPOSITORY_CONFIG_PATH_FILE="$$filePath" \
@@ -133,7 +110,7 @@ gh-load-folder:
 			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 			BRANCH_NAME=${BRANCH_NAME}; \
     done
-gh-load-file:
+gh-load-config-file:
 	echo GET Github file:: ${REPOSITORY_CONFIG_PATH_FILE}@${BRANCH_NAME}
 	curl -s -L -o ${TERRAGRUNT_CONFIG_PATH}/$(shell basename ${REPOSITORY_CONFIG_PATH_FILE} | cut -d. -f1)_${OVERRIDE_EXTENSION}$(shell [[ "${REPOSITORY_CONFIG_PATH_FILE}" = *.* ]] && echo .$(shell basename ${REPOSITORY_CONFIG_PATH_FILE} | cut -d. -f2) || echo '') \
 			-H "Accept: application/vnd.github.v3.raw" \
@@ -143,10 +120,10 @@ gh-load-file:
 
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
-	make prepare-convention OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
-	make prepare-aws-account OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
+	make prepare-convention-config-file OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
+	make prepare-aws-account-config-file OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
 .ONESHELL: prepare-account-aws
-prepare-convention:
+prepare-convention-config-file:
 	$(eval MODULES_GIT_HOST=github.com)
 	$(eval MODULES_ORGANIZATION_NAME=KookaS)
 	$(eval MODULES_PROJECT_NAME=infrastructure)
@@ -164,7 +141,7 @@ prepare-convention:
 		}
 	}
 	EOF
-prepare-aws-account:
+prepare-aws-account-config-file:
 	cat <<-EOF > ${PATH_ABS_AWS}/account_${OVERRIDE_EXTENSION}.hcl 
 	locals {
 		domain_name 			= "${DOMAIN_NAME}"
@@ -176,13 +153,46 @@ prepare-aws-account:
 		}
 	}
 	EOF
-
-prepare-microservice:
+prepare-microservice-config-file:
 	cat <<-EOF > ${TERRAGRUNT_CONFIG_PATH}/service_${OVERRIDE_EXTENSION}.hcl 
 	locals {
 		branch_name = "${BRANCH_NAME}"
 	}
 	EOF
+
+prepare-microservice:
+	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
+	$(eval branches=$(shell make gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
+	if [[ '$(shell echo ${branches} | grep -o "${BRANCH_NAME}" | wc -l)' == '0' ]]; then
+		$(eval BRANCH_NAME_MICROSERVICE=${DEFAULT_BRANCH_NAME})
+		echo -e '\033[43mWarning\033[0m' ::: BRANCH_NAME ${BRANCH_NAME} not found, using ${DEFAULT_BRANCH_NAME}
+		make prepare-microservice-config-file \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
+		make gh-load-folder \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+			GITHUB_TOKEN=${GITHUB_TOKEN} \
+			REPOSITORY_CONFIG_PATH_FOLDER=${REPOSITORY_CONFIG_PATH_FOLDER} \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+			ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+			REPOSITORY_NAME=${REPOSITORY_NAME} \
+			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
+	else
+		$(eval BRANCH_NAME_MICROSERVICE=${BRANCH_NAME})
+		make prepare-microservice-config-file \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
+		make gh-load-folder \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+			GITHUB_TOKEN=${GITHUB_TOKEN} \
+			REPOSITORY_CONFIG_PATH_FOLDER=${REPOSITORY_CONFIG_PATH_FOLDER} \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+			ORGANIZATION_NAME=${ORGANIZATION_NAME} \
+			REPOSITORY_NAME=${REPOSITORY_NAME} \
+			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
+	fi
 
 .ONESHELL: prepare-scraper-backend
 prepare-scraper-backend:
@@ -191,12 +201,10 @@ prepare-scraper-backend:
 	$(eval REPOSITORY_NAME=scraper-backend)
 	$(eval REPOSITORY_CONFIG_PATH_FOLDER=config)
 	$(eval DEFAULT_BRANCH_NAME=master)
+	$(eval COMMON_NAME=defined-in-hcl)
 	$(eval CLOUD_HOST=aws)
+
 	make prepare-microservice \
-		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
-		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-		BRANCH_NAME=${BRANCH_NAME}
-	make gh-load-folder-branch-check \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		GITHUB_TOKEN=${GITHUB_TOKEN} \
 		REPOSITORY_CONFIG_PATH_FOLDER=${REPOSITORY_CONFIG_PATH_FOLDER} \
@@ -204,10 +212,11 @@ prepare-scraper-backend:
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		DEFAULT_BRANCH_NAME=${DEFAULT_BRANCH_NAME} \
-		BRANCH_NAME=${BRANCH_NAME} 
+		BRANCH_NAME=${BRANCH_NAME}
 	make prepare-scraper-backend-env \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+		COMMON_NAME=${COMMON_NAME} \
 		CLOUD_HOST=${CLOUD_HOST} \
 		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
 		FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
@@ -220,7 +229,7 @@ prepare-scraper-backend-env:
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		OUTPUT_FOLDER=${TERRAGRUNT_CONFIG_PATH} \
 		CLOUD_HOST=${CLOUD_HOST} \
-		COMMON_NAME=defined-in-hcl \
+		COMMON_NAME=${COMMON_NAME} \
 		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
 		FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
 		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
@@ -234,11 +243,9 @@ prepare-scraper-frontend:
 	$(eval REPOSITORY_NAME=scraper-frontend)
 	$(eval REPOSITORY_CONFIG_PATH_FOLDER=config)
 	$(eval DEFAULT_BRANCH_NAME=master)
+	$(eval NEXT_PUBLIC_API_URL=defined-in-hcl)
+
 	make prepare-microservice \
-		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
-		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-		BRANCH_NAME=${BRANCH_NAME}
-	make gh-load-folder-branch-check \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		GITHUB_TOKEN=${GITHUB_TOKEN} \
 		REPOSITORY_CONFIG_PATH_FOLDER=${REPOSITORY_CONFIG_PATH_FOLDER} \
@@ -246,11 +253,11 @@ prepare-scraper-frontend:
 		ORGANIZATION_NAME=${ORGANIZATION_NAME} \
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		DEFAULT_BRANCH_NAME=${DEFAULT_BRANCH_NAME} \
-		BRANCH_NAME=${BRANCH_NAME} 
+		BRANCH_NAME=${BRANCH_NAME}
 	make prepare-scraper-frontend-env \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
-		NEXT_PUBLIC_API_URL=defined-in-hcl
+		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 prepare-scraper-frontend-env:
 	$(eval MAKEFILE=$(shell find ${TERRAGRUNT_CONFIG_PATH} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
@@ -260,16 +267,16 @@ prepare-scraper-frontend-env:
 		PORT=$(shell yq eval '.port' ${TERRAGRUNT_CONFIG_PATH}/config_${OVERRIDE_EXTENSION}.yml)
 
 init:
-	terragrunt init --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+	terragrunt init --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl
 validate:
-	terragrunt validate --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+	terragrunt validate --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl
 plan:
 	# -lock=false
-	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -no-color -out=${OUTPUT_FILE} 2>&1
+	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -no-color -out=${OUTPUT_FILE} 2>&1
 apply:
-	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl
+	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl
 destroy-ecs:
-	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${SRC_FOLDER}/terragrunt.hcl -target module.microservice.module.ecs
+	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -target module.microservice.module.ecs
 
 # it needs the tfstate files which are generated with apply
 graph:

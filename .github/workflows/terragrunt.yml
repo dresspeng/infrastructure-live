@@ -186,26 +186,26 @@ jobs:
         id: destroy
         if: inputs.running == 'false'
         run: |
-            make destroy-ecs SRC_FOLDER=${{ inputs.terragrunt_path }}
+            make destroy-ecs TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_path }}
 
       - name: Terragrunt init
         id: init
         if: inputs.running == 'true'
         run: |
-          make init SRC_FOLDER=${{ inputs.terragrunt_path }}
+          make init TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_path }}
 
       - name: Terragrunt validate
         id: validate
         if: inputs.running == 'true'
         run: |
-          make validate SRC_FOLDER=${{ inputs.terragrunt_path }}
+          make validate TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_path }}
 
       - name: Terragrunt plan
         id: plan
         if: github.event_name == 'pull_request' && inputs.running == 'true'
         continue-on-error: true
         run: |
-          make plan SRC_FOLDER=${{ inputs.terragrunt_path }} OUTPUT_FILE=/tmp/plan.tmp
+          make plan TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_path }} OUTPUT_FILE=/tmp/plan.tmp
           terraform show -no-color /tmp/plan.tmp >${GITHUB_WORKSPACE}/plan.out
 
       - name: Terraform - Show Plan in PR
@@ -254,4 +254,4 @@ jobs:
       - name: Terragrunt apply
         if: github.event_name == 'workflow_dispatch' && inputs.running == 'true'
         run: |
-          make apply SRC_FOLDER=${{ inputs.terragrunt_path }}
+          make apply TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_path }}

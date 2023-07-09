@@ -1,4 +1,7 @@
 locals {
+  service_tmp_vars = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
+  branch_name      = local.service_tmp_vars.locals.branch_name
+
   cidr_ipv4          = "2.0.0.0/16"
   vpc_tier           = "public"
   project_name       = "scraper"
@@ -16,4 +19,10 @@ locals {
   task_min_count     = 0
   task_desired_count = 1
   task_max_count     = 1
+
+  tags = {
+    "Git Microservice" = "${local.git_host_name}/${local.organization_name}/${local.repository_name}@${local.branch_name}"
+    "Project"          = local.project_name
+    "Service"          = local.service_name
+  }
 }

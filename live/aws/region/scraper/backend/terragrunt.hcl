@@ -41,6 +41,8 @@ locals {
 
   config_vars = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
 
+  name = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}")
+
   pricing_name_spot      = local.microservice_vars.locals.pricing_name_spot
   pricing_name_on_demand = local.microservice_vars.locals.pricing_name_on_demand
   ec2_user_data = {
@@ -48,7 +50,7 @@ locals {
       user_data = <<EOT
             #!/bin/bash
             cat <<'EOF' >> /etc/ecs/ecs.config
-                ECS_CLUSTER=${local.common_name}
+                ECS_CLUSTER=${local.name}
             EOF
         EOT
     }
@@ -56,7 +58,7 @@ locals {
       user_data = <<EOT
             #!/bin/bash
             cat <<'EOF' >> /etc/ecs/ecs.config
-                ECS_CLUSTER=${local.common_name}
+                ECS_CLUSTER=${local.name}
             EOF
         EOT
     }
@@ -106,34 +108,36 @@ locals {
 
   env_key         = "${local.branch_name}.env"
   env_local_path  = "${local.override_extension_name}.env"
-  env_var         = run_cmd("echo", "\"COMMON_NAME=${local.name}\"", local.env_local_path)
-  env_bucket_name = "${local.common_name}-env"
+  env_bucket_name = "${local.name}-env"
 
-  name = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}")
 }
 
 terraform {
+  before_hook "env" {
+    commands = ["init"]
+    execute = [
+      "/bin/bash",
+      "-c",
+      "echo COMMON_NAME=${local.name} >> ${get_terragrunt_dir()}/${local.env_local_path}"
+    ]
+  }
+
   source = "git::git@${local.modules_git_host_name}:${local.modules_organization_name}/${local.modules_repository_name}.git//module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
 }
 
 inputs = {
   common_name = local.name
   common_tags = merge(
-    local.convention_vars.locals.common_tags,
-    local.account_vars.locals.common_tags,
-    local.service_vars.locals.common_tags,
-    {
-      "Git Microservice" = "${local.git_host_name}/${local.organization_name}/${local.local.repository_name}@${local.local.branch_name}"
-      "Project"          = local.project_name
-      "Service"          = local.service_name
-    }
+    local.convention_vars.locals.tags,
+    local.account_vars.locals.tags,
+    local.service_vars.locals.tags,
   )
 
   microservice = {
     vpc = {
-      name      = local.common_name
+      name      = local.name
       cidr_ipv4 = local.cidr_ipv4
-      tier      = var.vpc_tier
+      tier      = local.vpc_tier
     }
     route53 = {
       zone = {
@@ -199,7 +203,7 @@ inputs = {
       )
       ec2     = local.ec2
       fargate = local.fargate
-      },
+      }
     )
   }
 
@@ -213,7 +217,7 @@ inputs = {
   }]
 
   bucket_picture = {
-    name          = "${local.common_name}-${local.config_vars.buckets.picture.name}"
+    name          = "${local.name}-${local.config_vars.buckets.picture.name}"
     force_destroy = false
     versioning    = true
   }
