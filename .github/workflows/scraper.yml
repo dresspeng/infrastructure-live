@@ -13,50 +13,13 @@ on:
         description: 'Up and running'     
         required: true
         default: true
-      use_fargate:
-        type: boolean
-        description: 'Use fargate'
-        required: false
-        default: false
-      task_count:
-        type: string
-        description: 'count of ECS tasks'     
-        required: false
-        default: '{ "min": 0, "desired": 1, "max": 1 }'
-      pricing_names:
-        type: string
-        description: 'pricings: [on-demand, spot] (no spacing!!!)'     
-        required: false
-        default: '[\"on-demand\",\"spot\"]'
-      ec2_instance_key:
-        type: choice
-        description: 'ec2 instance type'     
-        required: false
-        options:
-          - t3_small
-          - t3_medium
-        default: t3_small
-      fargate_instance_key:
-        type: choice
-        description: 'fargate instance type'     
-        required: false
-        options:
-          - cpu512_mib1024
-          - cpu1024_mib2048
-        default: cpu512_mib1024
-      instance_specs: 
-        type: string
-        description: 'operating system and architecture'     
-        required: false
-        default: '{ "os": "linux", "os_version": "2023", "arch": "x64" }'
   # push:
   #   branches-ignore: [dependabot/**]
   # pull_request:
   #   branches: [master]
 
 jobs:
-  ecr-publish:
-    name: ECR publish steps
+  prepare-backend:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'KookaS' }}
     steps:
@@ -76,6 +39,9 @@ jobs:
           PEXELS_PUBLIC_KEY: ${{ secrets.PEXELS_PUBLIC_KEY }}
         run: |
           make prepare-scraper-backend \
+            REPOSITORY_CONFIG_PATH=config \
+            CLOUD_HOST=aws \
+            TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
             SERVICE_UP=${{ inputs.running }} \
             USE_FARGATE=${{ inputs.use_fargate }} \
@@ -93,12 +59,40 @@ jobs:
             UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
             UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
             PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
+  
+  run-backend:
+    needs: [prepare-backend]
+    uses: ./.github/workflows/terragrunt.yml
+    with:
+      environment: ${{ inputs.environment || 'KookaS' }}
+      running: ${{ inputs.running }}
+      use_fargate: ${{ inputs.use_fargate }}
+      task_count: ${{ inputs.task_count }}
+      pricing_names: ${{ inputs.pricing_names }}
+      ec2_instance_key: ${{ inputs.ec2_instance_key }}
+      fargate_instance_key: ${{ inputs.fargate_instance_key }}
+      instance_specs: ${{ inputs.instance_specs }}
+      terragrunt_path: live/aws/region/scraper/backend
+    secrets:
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+
+  prepare-frontend:
+    needs: [run-backend]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'KookaS' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Prepare terragrunt for all microservices
+        run: make prepare-terragrunt
 
       - name: Prepare terragrunt for frontend
         env: 
           GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
         run: |
           make prepare-scraper-frontend \
+            TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
             SERVICE_UP=${{ inputs.running }} \
             USE_FARGATE=${{ inputs.use_fargate }} \
@@ -112,22 +106,8 @@ jobs:
             OS_VERSION=${{ fromJson(inputs.instance_specs).os_version}} \
             ARCHITECTURE=${{ fromJson(inputs.instance_specs).arch}}
   
-  backend:
-    name: Scraper backend
-    uses: ./.github/workflows/terragrunt.yml
-    with:
-      environment: ${{ inputs.environment || 'KookaS' }}
-      running: ${{ inputs.running }}
-      use_fargate: ${{ inputs.use_fargate }}
-      task_count: ${{ inputs.task_count }}
-      pricing_names: ${{ inputs.pricing_names }}
-      ec2_instance_key: ${{ inputs.ec2_instance_key }}
-      fargate_instance_key: ${{ inputs.fargate_instance_key }}
-      instance_specs: ${{ inputs.instance_specs }}
-      terragrunt_path: "live/aws/region/scraper/backend"
-  
   frontend:
-    name: Scraper frontend
+    needs: [prepare-frontend]
     uses: ./.github/workflows/terragrunt.yml
     with:
       environment: ${{ inputs.environment || 'KookaS' }}
@@ -138,4 +118,6 @@ jobs:
       ec2_instance_key: ${{ inputs.ec2_instance_key }}
       fargate_instance_key: ${{ inputs.fargate_instance_key }}
       instance_specs: ${{ inputs.instance_specs }}
-      terragrunt_path: "live/aws/region/scraper/frontend"
+      terragrunt_path: live/aws/region/scraper/frontend
+    secrets:
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
