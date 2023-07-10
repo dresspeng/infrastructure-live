@@ -26,21 +26,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Setup AWS CLI
-        run: |
-          make aws-auth \
-          AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
-          AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
-          AWS_PROFILE=${{ vars.AWS_PROFILE }} \
-          AWS_REGION=${{ vars.AWS_REGION }}
       - name: Login to ECR
         env:
-          ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
           AWS_CLI_SERVICE: ecr
           ECR_IMAGE_TAG: latest
         run: |
+          aws --version
+          aws configure set aws_access_key_id ${{ vars.AWS_ACCESS_KEY }} --profile ${{ vars.AWS_PROFILE }}
+          aws configure set --profile ${{ vars.AWS_PROFILE }} aws_secret_access_key ${{ secrets.AWS_SECRET_KEY }} --profile ${{ vars.AWS_PROFILE }}
+          aws configure set region ${{ vars.AWS_REGION }} --profile ${{ vars.AWS_PROFILE }}
+          aws configure set output 'text' --profile ${{ vars.AWS_PROFILE }}
+          aws configure list
           if [[ $AWS_CLI_SERVICE == ecr ]]; then
-            aws ecr get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY_URI }}
+            aws ecr get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS --password-stdin ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
           elif [[ $AWS_CLI_SERVICE == ecr-public ]]; then
             aws ecr-public get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS ---password-stdin public.ecr.aws
           fi
