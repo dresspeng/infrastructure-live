@@ -122,8 +122,22 @@ gh-load-config-file:
 			-H "X-GitHub-Api-Version: 2022-11-28" \
 			https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_CONFIG_PATH_FILE}?ref=${BRANCH_NAME}
 
-find-override-files:
+list-override-files:
 	find ./live -type f -name "*${OVERRIDE_EXTENSION}*"
+
+get-state-file:
+	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
+	$(eval branches=$(shell make gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
+	if [[ '$(shell echo ${branches} | grep -o "${BRANCH_NAME}" | wc -l)' == '0' ]]; then
+		$(eval BRANCH_NAME_MICROSERVICE=${DEFAULT_BRANCH_NAME})
+		echo -e '\033[43mWarning\033[0m' ::: BRANCH_NAME ${BRANCH_NAME} not found, using ${DEFAULT_BRANCH_NAME}
+		$(eval BUCKET_STATE_NAME=$(shell echo ${ORGANIZATION_NAME}-${REPOSITORY_NAME}-${BRANCH_NAME_MICROSERVICE}-tf-state | tr A-Z a-z))
+		aws s3api get-object --bucket ${BUCKET_STATE_NAME} --key ${TERRAGRUNT_CONFIG_PATH_FILE_FROM} ${TERRAGRUNT_CONFIG_PATH_FILE_TO}
+	else
+		$(eval BRANCH_NAME_MICROSERVICE=${BRANCH_NAME})
+		$(eval BUCKET_STATE_NAME=$(shell echo ${ORGANIZATION_NAME}-${REPOSITORY_NAME}-${BRANCH_NAME_MICROSERVICE}-tf-state | tr A-Z a-z))
+		aws s3api get-object --bucket ${BUCKET_STATE_NAME} --key ${TERRAGRUNT_CONFIG_PATH_FILE_FROM} ${TERRAGRUNT_CONFIG_PATH_FILE_TO}
+	fi
 
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
@@ -172,19 +186,6 @@ prepare-microservice-config-file:
 		branch_name = "${BRANCH_NAME}"
 	}
 	EOF
-prepare-state-file:
-	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
-	$(eval branches=$(shell make gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
-	if [[ '$(shell echo ${branches} | grep -o "${BRANCH_NAME}" | wc -l)' == '0' ]]; then
-		$(eval BRANCH_NAME_MICROSERVICE=${DEFAULT_BRANCH_NAME})
-		echo -e '\033[43mWarning\033[0m' ::: BRANCH_NAME ${BRANCH_NAME} not found, using ${DEFAULT_BRANCH_NAME}
-		$(eval BUCKET_STATE_NAME=$(echo ${PREFIX_NAME}-${BRANCH_NAME_MICROSERVICE}-tf-state | tr A-Z a-z))
-		aws s3api get-object --bucket ${BUCKET_STATE_NAME} --key ${REPOSITORY_CONFIG_PATH_FILE_FROM} ${REPOSITORY_CONFIG_PATH_FILE_TO}
-	else
-		$(eval BRANCH_NAME_MICROSERVICE=${BRANCH_NAME})
-		$(eval BUCKET_STATE_NAME=$(echo ${PREFIX_NAME}-${BRANCH_NAME_MICROSERVICE}-tf-state | tr A-Z a-z))
-		aws s3api get-object --bucket ${BUCKET_STATE_NAME} --key ${REPOSITORY_CONFIG_PATH_FILE_FROM} ${REPOSITORY_CONFIG_PATH_FILE_TO}
-	fi
 	
 prepare-microservice:
 	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
@@ -310,8 +311,10 @@ plan:
 	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -no-color -out=${OUTPUT_FILE} 2>&1
 apply:
 	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl
-destroy-ecs:
-	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -target module.microservice.module.ecs
+destroy-microservice:
+	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -target module.microservice
+output-microservice:
+	terragrunt output --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -json  microservice
 
 # it needs the tfstate files which are generated with apply
 graph:

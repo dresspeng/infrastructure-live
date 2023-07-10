@@ -93,32 +93,39 @@ jobs:
             AWS_REGION=${{ vars.AWS_REGION }} \
             AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
             AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+          make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+
           if [[ ${{ inputs.running }} == false ]]; then
-            make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-          else
-            make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+            make destroy-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+          else            
             make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
           fi
 
       - name: Terragrunt frontend
         id: frontend
         run: |
-          export NEXT_PUBLIC_API_URL=$(terraform output -state=live/aws/region/scraper/backend/terraform.tfstate -json  microservice | jq '.ecs.elb.lb_dns_name')
-          echo BACKEND DNS URL ::: ${NEXT_PUBLIC_API_URL}
+          NEXT_PUBLIC_API_URL=$(make output-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend | jq '.ecs.elb.lb_dns_name')
+          if [[ -z ${NEXT_PUBLIC_API_URL} ]]; then
+            echo -e '\033[41mBACKEND_DNS_URL\033[0m' ::: ${NEXT_PUBLIC_API_URL}
+            # exit 42
+          else
+            echo -e '\033[44mBACKEND_DNS_URL\033[0m' ::: ${NEXT_PUBLIC_API_URL}
+          fi
 
           make prepare-scraper-frontend \
             GITHUB_TOKEN=${{ secrets.GH_TERRA_TOKEN}} \
             TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}  \
             NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+          make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+
           if [[ ${{ inputs.running }} == false ]]; then
-            make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+            make destroy-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
           else
-            make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
             make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
           fi
 
-      # # FIXME: there is no package for registry.terraform.io/hashicorp/aws there is no package for registry.terraform.io/hashicorp/null
+      # # FIXME: do not use terraform at all, only terragrunt
       # - name: Build docker image
       #   run: |
       #     docker build --progress=plain -t $DOCKER_IMAGE_NAME -f Dockerfile .
@@ -190,10 +197,11 @@ jobs:
       #           AWS_REGION=${AWS_REGION} \
       #           AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
       #           AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      #         make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+      # 
       #         if [[ ${INPUT_RUNNING} == false ]]; then
-      #           make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-      #         else
-      #           make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+      #           make destroy-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+      #         else      #           
       #           make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
       #         fi
 
@@ -204,48 +212,14 @@ jobs:
       #           TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
       #           BRANCH_NAME=${BRANCH_NAME} \
       #           NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      #         make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+      #
       #         if [[ ${INPUT_RUNNING} == false ]]; then
-      #           make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+      #           make destroy-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
       #         else
-      #           make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
       #           make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
       #         fi
       #         '
-
-      # - name: Prepare terragrunt for all microservices
-      #   run: |
-      #     make prepare-terragrunt \
-      #       DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
-      #       AWS_REGION=${{ vars.AWS_REGION }} \
-      #       AWS_PROFILE=${{ vars.AWS_PROFILE }} \
-      #       AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
-
-      # - name: Prepare terragrunt for backend
-      #   env: 
-      #     GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
-      #     FLICKR_PRIVATE_KEY: ${{ secrets.FLICKR_PRIVATE_KEY }}
-      #     FLICKR_PUBLIC_KEY: ${{ secrets.FLICKR_PUBLIC_KEY }}
-      #     UNSPLASH_PRIVATE_KEY: ${{ secrets.UNSPLASH_PRIVATE_KEY }}
-      #     UNSPLASH_PUBLIC_KEY: ${{ secrets.UNSPLASH_PUBLIC_KEY }}
-      #     PEXELS_PUBLIC_KEY: ${{ secrets.PEXELS_PUBLIC_KEY }}
-      #   run: |
-      #     make prepare-scraper-backend \
-      #       TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
-      #       BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
-      #       FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
-      #       FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
-      #       UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
-      #       UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
-      #       PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
-      #       AWS_REGION=${{ vars.AWS_REGION }} \
-      #       AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
-      #       AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
-      #     if [[ ${{ inputs.running }} == false ]]; then
-      #       make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-      #     else
-      #       make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-      #       make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-      #     fi
   
   # # FIXME: files created above are missing in reusable workflow
   # run-backend:
