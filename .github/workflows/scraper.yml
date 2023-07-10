@@ -18,6 +18,10 @@ on:
   # pull_request:
   #   branches: [master]
 
+env:
+  TERRAFORM_VERSION: 1.4.6
+  TERRAGRUNT_VERSION: 0.45.17
+
 jobs:
   scraper:
     runs-on: ubuntu-latest
