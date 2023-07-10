@@ -22,8 +22,6 @@ jobs:
   prepare-backend:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'KookaS' }}
-    outputs:
-      AWS_SECRET_KEY: ${{ steps.get-output.outputs.AWS_SECRET_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -48,10 +46,6 @@ jobs:
             UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
             UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
             PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
-
-      - name: Save env
-        id: get-output
-        run: echo "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}" >> $GITHUB_OUTPUT
   
   run-backend:
     needs: [prepare-backend]
@@ -60,8 +54,7 @@ jobs:
       environment: ${{ inputs.environment || 'KookaS' }}
       running: ${{ inputs.running }}
       terragrunt_config_path: live/aws/region/scraper/backend
-    secrets:
-      AWS_SECRET_KEY: ${{ needs.prepare-backend.outputs.AWS_SECRET_KEY }}
+    secrets: inherit
 
   prepare-frontend:
     needs: [run-backend]
@@ -89,5 +82,4 @@ jobs:
       environment: ${{ inputs.environment || 'KookaS' }}
       running: ${{ inputs.running }}
       terragrunt_config_path: live/aws/region/scraper/frontend
-    secrets:
-      AWS_SECRET_KEY: ${{ needs.prepare-backend.outputs.AWS_SECRET_KEY }}
+    secrets: inherit
