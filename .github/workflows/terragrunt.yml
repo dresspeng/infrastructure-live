@@ -43,6 +43,7 @@ jobs:
           aws configure set aws_secret_access_key $AWS_SECRET_KEY
           aws configure set region $AWS_REGION
 
+      # # FIXME: there is no package for registry.terraform.io/hashicorp/aws there is no package for registry.terraform.io/hashicorp/null
       # - name: Login to ECR
       #   env:
       #     ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com

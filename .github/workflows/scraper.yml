@@ -44,98 +44,166 @@ jobs:
             aws ecr-public get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS ---password-stdin public.ecr.aws
           fi
 
-      - name: Build docker image
+      - uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Setup Terraform v${{ env.TERRAFORM_VERSION }}
+        uses: hashicorp/setup-Terraform@v1
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: true
+
+      - name: Setup Terraform version
+        run: terraform --version
+
+      - name: Setup Terraform wrapper path
+        run: which terraform
+      - name: Setup Terragrunt v${{ env.TERRAGRUNT_VERSION }}
         run: |
-          docker build --progress=plain -t $DOCKER_IMAGE_NAME -f Dockerfile .
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.TERRAGRUNT_VERSION }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
 
-      - name: Scraper
+      - name: Terragrunt prepare
+        id: prepare
         run: |
-          docker run \
-            -v /tmp:/tmp \
-            --user 1001:1001 \
-            --env AWS_REGION=${{ vars.AWS_REGION }} \
-            --env AWS_PROFILE=${{ vars.AWS_PROFILE }} \
-            --env AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
-            --env AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
-            --env AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }} \
-            --env GITHUB_TOKEN=${{ secrets.GH_TERRA_TOKEN }} \
-            --env SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}" \
-            --env SSH_PUBLIC_KEY="${{ vars.SSH_PUBLIC_KEY }}" \
-            --env INPUT_RUNNING=${{ inputs.running }} \
-            --env BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
-            --env DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
-            --env FLICKR_PRIVATE_KEY=${{ secrets.FLICKR_PRIVATE_KEY }} \
-            --env FLICKR_PUBLIC_KEY=${{ secrets.FLICKR_PUBLIC_KEY }} \
-            --env UNSPLASH_PRIVATE_KEY=${{ secrets.UNSPLASH_PRIVATE_KEY }} \
-            --env UNSPLASH_PUBLIC_KEY=${{ secrets.UNSPLASH_PUBLIC_KEY }} \
-            --env PEXELS_PUBLIC_KEY=${{ secrets.PEXELS_PUBLIC_KEY }} \
-            $DOCKER_IMAGE_NAME \
-            /bin/bash -c '
+          make prepare-terragrunt \
+            DOMAIN_NAME=${{ vars.DOMAIN_NAME }}  \
+            AWS_REGION=${{ vars.AWS_REGION }} \
+            AWS_PROFILE=${{ vars.AWS_PROFILE }}  \
+            AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
 
-              # tmp ownership
-              sudo mkdir -p /tmp/out
-              sudo chown 1001:1001 /tmp/out
-              sudo chmod g+s /tmp/out
-              ls -l /tmp/out
+      - name: Terragrunt backend
+        id: backend
+        run: |
+          make prepare-scraper-backend \
+            TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
+            BRANCH_NAME=${{ github.head_ref || github.ref_name }}  \
+            FLICKR_PRIVATE_KEY=${{ secrets.FLICKR_PRIVATE_KEY }} \
+            FLICKR_PUBLIC_KEY=${{ secrets.FLICKR_PUBLIC_KEY }} \
+            UNSPLASH_PRIVATE_KEY=${{ secrets.UNSPLASH_PRIVATE_KEY }} \
+            UNSPLASH_PUBLIC_KEY=${{ secrets.UNSPLASH_PUBLIC_KEY }} \
+            PEXELS_PUBLIC_KEY=${{ secrets.PEXELS_PUBLIC_KEY }} \
+            AWS_REGION=${{ vars.AWS_REGION }} \
+            AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
+            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+          if [[ ${INPUT_RUNNING} == false ]]; then
+            make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+          else
+            make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+            make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+          fi
 
-              # aws
-              make aws-auth
+      - name: Terragrunt frontend
+        id: frontend
+        run: |
+          export NEXT_PUBLIC_API_URL=$(terraform output -state=live/aws/region/scraper/backend/terraform.tfstate -json  microservice | jq '.ecs.elb.lb_dns_name')
+          echo BACKEND DNS URL ::: ${NEXT_PUBLIC_API_URL}
+          make prepare-scraper-frontend \
+            TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
+            BRANCH_NAME=${{ github.head_ref || github.ref_name }}  \
+            NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+          if [[ ${INPUT_RUNNING} == false ]]; then
+            make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+          else
+            make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+            make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+          fi
 
-              # github token
-              make gh-auth-check
+      # # FIXME: there is no package for registry.terraform.io/hashicorp/aws there is no package for registry.terraform.io/hashicorp/null
+      # - name: Build docker image
+      #   run: |
+      #     docker build --progress=plain -t $DOCKER_IMAGE_NAME -f Dockerfile .
 
-              # ssh
-              eval `ssh-agent -s`
-              mkdir -p ~/.ssh
-              SSH_FOLDER=$(cd ~/.ssh; pwd)
-              echo ${SSH_FOLDER}
-              echo "${SSH_PRIVATE_KEY}" > ~/.ssh/action
-              echo "${SSH_PUBLIC_KEY}" > ~/.ssh/action.pub
-              sudo chmod -R 600 ${SSH_FOLDER}/action
-              ssh-add ~/.ssh/action
-              ssh-keyscan github.com >> ~/.ssh/known_hosts
-              cat ~/.ssh/known_hosts
+      # - name: Scraper
+      #   run: |
+      #     docker run \
+      #       -v /tmp:/tmp \
+      #       --user 1001:1001 \
+      #       --env AWS_REGION=${{ vars.AWS_REGION }} \
+      #       --env AWS_PROFILE=${{ vars.AWS_PROFILE }} \
+      #       --env AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
+      #       --env AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
+      #       --env AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }} \
+      #       --env GITHUB_TOKEN=${{ secrets.GH_TERRA_TOKEN }} \
+      #       --env SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}" \
+      #       --env SSH_PUBLIC_KEY="${{ vars.SSH_PUBLIC_KEY }}" \
+      #       --env INPUT_RUNNING=${{ inputs.running }} \
+      #       --env BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
+      #       --env DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
+      #       --env FLICKR_PRIVATE_KEY=${{ secrets.FLICKR_PRIVATE_KEY }} \
+      #       --env FLICKR_PUBLIC_KEY=${{ secrets.FLICKR_PUBLIC_KEY }} \
+      #       --env UNSPLASH_PRIVATE_KEY=${{ secrets.UNSPLASH_PRIVATE_KEY }} \
+      #       --env UNSPLASH_PUBLIC_KEY=${{ secrets.UNSPLASH_PUBLIC_KEY }} \
+      #       --env PEXELS_PUBLIC_KEY=${{ secrets.PEXELS_PUBLIC_KEY }} \
+      #       $DOCKER_IMAGE_NAME \
+      #       /bin/bash -c '
 
-              # terragrunt
-              make prepare-terragrunt \
-                DOMAIN_NAME=${DOMAIN_NAME} \
-                AWS_REGION=${AWS_REGION} \
-                AWS_PROFILE=${AWS_PROFILE} \
-                AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
+      #         # tmp ownership
+      #         sudo mkdir -p /tmp/out
+      #         sudo chown 1001:1001 /tmp/out
+      #         sudo chmod g+s /tmp/out
+      #         ls -l /tmp/out
 
-              # backend
-              make prepare-scraper-backend \
-                TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
-                BRANCH_NAME=${BRANCH_NAME} \
-                FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
-                FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
-                UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
-                UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
-                PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
-                AWS_REGION=${AWS_REGION} \
-                AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
-                AWS_SECRET_KEY=${AWS_SECRET_KEY}
-              if [[ ${INPUT_RUNNING} == false ]]; then
-                make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-              else
-                make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-                make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-              fi
+      #         # aws
+      #         make aws-auth
 
-              # frontend
-              export NEXT_PUBLIC_API_URL=$(terraform output -state=live/aws/region/scraper/backend/terraform.tfstate -json  microservice | jq '.ecs.elb.lb_dns_name')
-              echo BACKEND DNS URL ::: ${NEXT_PUBLIC_API_URL}
-              make prepare-scraper-frontend \
-                TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
-                BRANCH_NAME=${BRANCH_NAME} \
-                NEXT_PUBLIC_API_URL=$(terraform output -state=live/aws/region/scraper/backend/terraform.tfstate -json  microservice | jq '.ecs.elb.lb_dns_name')
-              if [[ ${INPUT_RUNNING} == false ]]; then
-                make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
-              else
-                make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
-                make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
-              fi
-              '
+      #         # github token
+      #         make gh-auth-check
+
+      #         # ssh
+      #         eval `ssh-agent -s`
+      #         mkdir -p ~/.ssh
+      #         SSH_FOLDER=$(cd ~/.ssh; pwd)
+      #         echo ${SSH_FOLDER}
+      #         echo "${SSH_PRIVATE_KEY}" > ~/.ssh/action
+      #         echo "${SSH_PUBLIC_KEY}" > ~/.ssh/action.pub
+      #         sudo chmod -R 600 ${SSH_FOLDER}/action
+      #         ssh-add ~/.ssh/action
+      #         ssh-keyscan github.com >> ~/.ssh/known_hosts
+      #         cat ~/.ssh/known_hosts
+
+      #         # terragrunt
+      #         make prepare-terragrunt \
+      #           DOMAIN_NAME=${DOMAIN_NAME} \
+      #           AWS_REGION=${AWS_REGION} \
+      #           AWS_PROFILE=${AWS_PROFILE} \
+      #           AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
+
+      #         # backend
+      #         make prepare-scraper-backend \
+      #           TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
+      #           BRANCH_NAME=${BRANCH_NAME} \
+      #           FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
+      #           FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
+      #           UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
+      #           UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
+      #           PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
+      #           AWS_REGION=${AWS_REGION} \
+      #           AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+      #           AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      #         if [[ ${INPUT_RUNNING} == false ]]; then
+      #           make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+      #         else
+      #           make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+      #           make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+      #         fi
+
+      #         # frontend
+      #         export NEXT_PUBLIC_API_URL=$(terraform output -state=live/aws/region/scraper/backend/terraform.tfstate -json  microservice | jq '.ecs.elb.lb_dns_name')
+      #         echo BACKEND DNS URL ::: ${NEXT_PUBLIC_API_URL}
+      #         make prepare-scraper-frontend \
+      #           TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
+      #           BRANCH_NAME=${BRANCH_NAME} \
+      #           NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      #         if [[ ${INPUT_RUNNING} == false ]]; then
+      #           make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+      #         else
+      #           make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+      #           make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+      #         fi
+      #         '
 
       # - name: Prepare terragrunt for all microservices
       #   run: |
@@ -181,32 +249,6 @@ jobs:
   #     running: ${{ inputs.running }}
   #     terragrunt_config_path: live/aws/region/scraper/backend
   #   secrets: inherit
-
-  # prepare-frontend:
-  #   # needs: [run-backend]
-  #   needs: [prepare-backend]
-  #   runs-on: ubuntu-latest
-  #   environment: ${{ inputs.environment || 'KookaS' }}
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v3
-
-  #     - name: Prepare terragrunt for all microservices
-  #       run: make prepare-terragrunt
-
-  #     - name: Prepare terragrunt for frontend
-  #       env: 
-  #         GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
-  #       run: |
-  #         make prepare-scraper-frontend \
-  #           TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
-  #           BRANCH_NAME=${{ github.head_ref || github.ref_name }}
-  #         if [[ ${{ inputs.running }} == false ]]; then
-  #           make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
-  #         else
-  #           make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
-  #           make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
-  #         fi
   
   # # FIXME: files created above are missing in reusable workflow
   # run-frontend:
