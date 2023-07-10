@@ -10,58 +10,8 @@ on:
             running:
                 type: boolean
                 description: 'Up and running'     
-                required: true
-                required: true
-            use_fargate:
-                type: boolean
-                description: 'Use fargate'
-                required: true
-            task_count:
-                type: string
-                description: 'count of ECS tasks'     
-                required: true
-            pricing_names:
-                type: string
-                description: 'pricings: [on-demand, spot] (no spacing!!!)'     
-                required: true
-            ec2_instance_key:
-                type: string
-                description: 'ec2 instance type'     
-                required: true
-            fargate_instance_key:
-                type: string
-                description: 'fargate instance type'     
-                required: true
-            instance_specs: 
-                type: string
-                description: 'operating system and architecture'     
-                required: true     
-                required: true 
-            use_fargate:
-                type: boolean
-                description: 'Use fargate'
-                required: true
-            task_count:
-                type: string
-                description: 'count of ECS tasks'     
-                required: true
-            pricing_names:
-                type: string
-                description: 'pricings: [on-demand, spot] (no spacing!!!)'     
-                required: true
-            ec2_instance_key:
-                type: string
-                description: 'ec2 instance type'     
-                required: true
-            fargate_instance_key:
-                type: string
-                description: 'fargate instance type'     
-                required: true
-            instance_specs: 
-                type: string
-                description: 'operating system and architecture'     
-                required: true     
-            terragrunt_path:
+                required: true  
+            terragrunt_config_path:
                 type: string
                 description: 'the path where the hcl file is located for the microservice'     
                 required: true
@@ -186,26 +136,26 @@ jobs:
         id: destroy
         if: inputs.running == 'false'
         run: |
-            make destroy-ecs TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_path }}
+            make destroy-ecs TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }}
 
       - name: Terragrunt init
         id: init
         if: inputs.running == 'true'
         run: |
-          make init TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_path }}
+          make init TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }}
 
       - name: Terragrunt validate
         id: validate
         if: inputs.running == 'true'
         run: |
-          make validate TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_path }}
+          make validate TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }}
 
       - name: Terragrunt plan
         id: plan
         if: github.event_name == 'pull_request' && inputs.running == 'true'
         continue-on-error: true
         run: |
-          make plan TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_path }} OUTPUT_FILE=/tmp/plan.tmp
+          make plan TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }} OUTPUT_FILE=/tmp/plan.tmp
           terraform show -no-color /tmp/plan.tmp >${GITHUB_WORKSPACE}/plan.out
 
       - name: Terraform - Show Plan in PR
@@ -254,4 +204,4 @@ jobs:
       - name: Terragrunt apply
         if: github.event_name == 'workflow_dispatch' && inputs.running == 'true'
         run: |
-          make apply TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_path }}
+          make apply TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }}

@@ -194,6 +194,10 @@ prepare-microservice:
 			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
 	fi
 
+test:
+	$(eval test=123)
+	echo ${test}
+
 .ONESHELL: prepare-scraper-backend
 prepare-scraper-backend:
 	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend)
