@@ -82,6 +82,7 @@ jobs:
         id: backend
         run: |
           make prepare-scraper-backend \
+            GITHUB_TOKEN=${{ secrets.GH_TERRA_TOKEN}} \
             TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}  \
             FLICKR_PRIVATE_KEY=${{ secrets.FLICKR_PRIVATE_KEY }} \
@@ -104,7 +105,9 @@ jobs:
         run: |
           export NEXT_PUBLIC_API_URL=$(terraform output -state=live/aws/region/scraper/backend/terraform.tfstate -json  microservice | jq '.ecs.elb.lb_dns_name')
           echo BACKEND DNS URL ::: ${NEXT_PUBLIC_API_URL}
+
           make prepare-scraper-frontend \
+            GITHUB_TOKEN=${{ secrets.GH_TERRA_TOKEN}} \
             TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}  \
             NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
