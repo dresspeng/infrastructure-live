@@ -26,40 +26,190 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Prepare terragrunt for all microservices
+      - name: Setup AWS CLI
         run: |
-          make prepare-terragrunt \
-            DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
-            AWS_REGION=${{ vars.AWS_REGION }} \
-            AWS_PROFILE=${{ vars.AWS_PROFILE }} \
-            AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
-
-      - name: Prepare terragrunt for backend
-        env: 
-          GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
-          FLICKR_PRIVATE_KEY: ${{ secrets.FLICKR_PRIVATE_KEY }}
-          FLICKR_PUBLIC_KEY: ${{ secrets.FLICKR_PUBLIC_KEY }}
-          UNSPLASH_PRIVATE_KEY: ${{ secrets.UNSPLASH_PRIVATE_KEY }}
-          UNSPLASH_PUBLIC_KEY: ${{ secrets.UNSPLASH_PUBLIC_KEY }}
-          PEXELS_PUBLIC_KEY: ${{ secrets.PEXELS_PUBLIC_KEY }}
+          aws --version
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY
+          aws configure set aws_secret_access_key $AWS_SECRET_KEY
+          aws configure set region $AWS_REGION
+      - name: Login to ECR
+        env:
+          ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+          AWS_CLI_SERVICE: ecr
+          ECR_IMAGE_TAG: latest
         run: |
-          make prepare-scraper-backend \
-            TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
-            BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
-            FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
-            FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
-            UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
-            UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
-            PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
-            AWS_REGION=${{ vars.AWS_REGION }} \
-            AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
-            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
-          if [[ ${{ inputs.running }} == false ]]; then
-            make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-          else
-            make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-            make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+          if [[ $AWS_CLI_SERVICE == ecr ]]; then
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URI
+          elif [[ $AWS_CLI_SERVICE == ecr-public ]]; then
+            aws ecr-public get-login-password --region $AWS_REGION | docker login --username AWS ---password-stdin public.ecr.aws
           fi
+      - name: Scraper backend
+        run: |          
+          sudo docker build --progress=plain -t this-image -f Dockerfile .
+          sudo docker run -it \
+            -v /tmp:/tmp \
+            --user 1001:1001 \
+            --env AWS_REGION=${AWS_REGION} \
+            --env AWS_PROFILE=${AWS_PROFILE} \
+            --env AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+            --env AWS_SECRET_KEY=${AWS_SECRET_KEY} \
+            --env AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
+            --env ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
+            --env GITHUB_TOKEN=${GH_TERRA_TOKEN} \
+            --env SSH_PRIVATE_KEY="${SSH_PRIVATE_KEY}" \
+            --env SSH_PUBLIC_KEY="${SSH_PUBLIC_KEY}" \
+            --env INPUT_RUNNING=${{ inputs.running }} \
+            --env BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
+            --env DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
+            this-image \
+            /bin/bash -c '
+
+              # tmp ownership
+              sudo mkdir -p /tmp/out
+              sudo chown 1001:1001 /tmp/out
+              sudo chmod g+s /tmp/out
+              ls -l /tmp/out
+
+              # aws
+              make aws-auth
+
+              # github token
+              make gh-auth-check
+
+              # ssh
+              eval `ssh-agent -s`
+              mkdir -p ~/.ssh
+              SSH_FOLDER=$(cd ~/.ssh; pwd)
+              echo ${SSH_FOLDER}
+              echo "${SSH_PRIVATE_KEY}" > ~/.ssh/action
+              echo "${SSH_PUBLIC_KEY}" > ~/.ssh/action.pub
+              sudo chmod -R 600 ${SSH_FOLDER}/action
+              ssh-add ~/.ssh/action
+              ssh-keyscan github.com >> ~/.ssh/known_hosts
+              cat ~/.ssh/known_hosts
+
+              # terragrunt
+              make prepare-terragrunt \
+                DOMAIN_NAME=${DOMAIN_NAME} \
+                AWS_REGION=${AWS_REGION} \
+                AWS_PROFILE=${AWS_PROFILE} \
+                AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}         
+              make prepare-scraper-backend \
+                TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
+                BRANCH_NAME=${BRANCH_NAME} \
+                FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
+                FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
+                UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
+                UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
+                PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
+                AWS_REGION=${AWS_REGION} \
+                AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+                AWS_SECRET_KEY=${AWS_SECRET_KEY}
+              echo ${INPUT_RUNNING} == false
+              if [[ ${INPUT_RUNNING} == false ]]; then
+                make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+              else
+                make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+                make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+              fi
+              '
+      - name: Scraper frontend
+        run: |          
+          sudo docker build --progress=plain -t this-image -f Dockerfile .
+          sudo docker run -it \
+            -v /tmp:/tmp \
+            --user 1001:1001 \
+            --env AWS_REGION=${AWS_REGION} \
+            --env AWS_PROFILE=${AWS_PROFILE} \
+            --env AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+            --env AWS_SECRET_KEY=${AWS_SECRET_KEY} \
+            --env AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
+            --env ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
+            --env GITHUB_TOKEN=${GH_TERRA_TOKEN} \
+            --env SSH_PRIVATE_KEY="${SSH_PRIVATE_KEY}" \
+            --env SSH_PUBLIC_KEY="${SSH_PUBLIC_KEY}" \
+            --env INPUT_RUNNING=${{ inputs.running }} \
+            --env BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
+            --env DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
+            this-image \
+            /bin/bash -c '
+
+              # tmp ownership
+              sudo mkdir -p /tmp/out
+              sudo chown 1001:1001 /tmp/out
+              sudo chmod g+s /tmp/out
+              ls -l /tmp/out
+
+              # aws
+              make aws-auth
+
+              # github token
+              make gh-auth-check
+
+              # ssh
+              eval `ssh-agent -s`
+              mkdir -p ~/.ssh
+              SSH_FOLDER=$(cd ~/.ssh; pwd)
+              echo ${SSH_FOLDER}
+              echo "${SSH_PRIVATE_KEY}" > ~/.ssh/action
+              echo "${SSH_PUBLIC_KEY}" > ~/.ssh/action.pub
+              sudo chmod -R 600 ${SSH_FOLDER}/action
+              ssh-add ~/.ssh/action
+              ssh-keyscan github.com >> ~/.ssh/known_hosts
+              cat ~/.ssh/known_hosts
+
+              # terragrunt
+              make prepare-terragrunt \
+                DOMAIN_NAME=${DOMAIN_NAME} \
+                AWS_REGION=${AWS_REGION} \
+                AWS_PROFILE=${AWS_PROFILE} \
+                AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}         
+              make prepare-scraper-frontend \
+                TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
+                BRANCH_NAME=${BRANCH_NAME}
+              echo ${INPUT_RUNNING} == false
+              if [[ ${INPUT_RUNNING} == false ]]; then
+                make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+              else
+                make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+                make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+              fi
+              '
+
+      # - name: Prepare terragrunt for all microservices
+      #   run: |
+      #     make prepare-terragrunt \
+      #       DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
+      #       AWS_REGION=${{ vars.AWS_REGION }} \
+      #       AWS_PROFILE=${{ vars.AWS_PROFILE }} \
+      #       AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
+
+      # - name: Prepare terragrunt for backend
+      #   env: 
+      #     GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
+      #     FLICKR_PRIVATE_KEY: ${{ secrets.FLICKR_PRIVATE_KEY }}
+      #     FLICKR_PUBLIC_KEY: ${{ secrets.FLICKR_PUBLIC_KEY }}
+      #     UNSPLASH_PRIVATE_KEY: ${{ secrets.UNSPLASH_PRIVATE_KEY }}
+      #     UNSPLASH_PUBLIC_KEY: ${{ secrets.UNSPLASH_PUBLIC_KEY }}
+      #     PEXELS_PUBLIC_KEY: ${{ secrets.PEXELS_PUBLIC_KEY }}
+      #   run: |
+      #     make prepare-scraper-backend \
+      #       TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
+      #       BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
+      #       FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
+      #       FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
+      #       UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
+      #       UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
+      #       PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
+      #       AWS_REGION=${{ vars.AWS_REGION }} \
+      #       AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
+      #       AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+      #     if [[ ${{ inputs.running }} == false ]]; then
+      #       make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+      #     else
+      #       make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+      #       make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+      #     fi
   
   # # FIXME: files created above are missing in reusable workflow
   # run-backend:
@@ -71,31 +221,31 @@ jobs:
   #     terragrunt_config_path: live/aws/region/scraper/backend
   #   secrets: inherit
 
-  prepare-frontend:
-    # needs: [run-backend]
-    needs: [prepare-backend]
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'KookaS' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+  # prepare-frontend:
+  #   # needs: [run-backend]
+  #   needs: [prepare-backend]
+  #   runs-on: ubuntu-latest
+  #   environment: ${{ inputs.environment || 'KookaS' }}
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
 
-      - name: Prepare terragrunt for all microservices
-        run: make prepare-terragrunt
+  #     - name: Prepare terragrunt for all microservices
+  #       run: make prepare-terragrunt
 
-      - name: Prepare terragrunt for frontend
-        env: 
-          GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
-        run: |
-          make prepare-scraper-frontend \
-            TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
-            BRANCH_NAME=${{ github.head_ref || github.ref_name }}
-          if [[ ${{ inputs.running }} == false ]]; then
-            make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
-          else
-            make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
-            make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
-          fi
+  #     - name: Prepare terragrunt for frontend
+  #       env: 
+  #         GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
+  #       run: |
+  #         make prepare-scraper-frontend \
+  #           TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
+  #           BRANCH_NAME=${{ github.head_ref || github.ref_name }}
+  #         if [[ ${{ inputs.running }} == false ]]; then
+  #           make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+  #         else
+  #           make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+  #           make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+  #         fi
   
   # # FIXME: files created above are missing in reusable workflow
   # run-frontend:
