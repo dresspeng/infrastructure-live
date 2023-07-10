@@ -118,6 +118,9 @@ gh-load-config-file:
 			-H "X-GitHub-Api-Version: 2022-11-28" \
 			https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_CONFIG_PATH_FILE}?ref=${BRANCH_NAME}
 
+find-override-files:
+	find ./live -type f -name "*${OVERRIDE_EXTENSION}*"
+
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
 	make prepare-convention-config-file OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
@@ -226,7 +229,10 @@ prepare-scraper-backend:
 		FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
 		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
 		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
-		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
+		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
+		AWS_REGION=${AWS_REGION} \
+		AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+		AWS_SECRET_KEY=${AWS_SECRET_KEY}
 prepare-scraper-backend-env:
 	$(eval MAKEFILE=$(shell find ${TERRAGRUNT_CONFIG_PATH} -type f -name "*Makefile*"))
 	make -f ${MAKEFILE} prepare \
@@ -238,7 +244,10 @@ prepare-scraper-backend-env:
 		FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
 		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
 		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
-		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
+		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
+		AWS_REGION=${AWS_REGION} \
+		AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
+		AWS_SECRET_KEY=${AWS_SECRET_KEY}
 
 .ONESHELL: prepare-scraper-frontend
 prepare-scraper-frontend:

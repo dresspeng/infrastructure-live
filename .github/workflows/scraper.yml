@@ -45,7 +45,11 @@ jobs:
             FLICKR_PUBLIC_KEY=${FLICKR_PUBLIC_KEY} \
             UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
             UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
-            PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
+            PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
+            AWS_REGION=${{ vars.AWS_REGION }} \
+            AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
+            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+          make find-override-files
   
   run-backend:
     needs: [prepare-backend]
@@ -74,6 +78,7 @@ jobs:
           make prepare-scraper-frontend \
             TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}
+          make find-override-files
   
   run-frontend:
     needs: [prepare-frontend]
