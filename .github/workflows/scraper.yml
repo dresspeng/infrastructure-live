@@ -22,6 +22,8 @@ jobs:
   scraper:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'KookaS' }}
+    env:
+      DOCKER_IMAGE_NAME: this-image
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -42,11 +44,13 @@ jobs:
             aws ecr-public get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS ---password-stdin public.ecr.aws
           fi
 
+      - name: Build docker image
+        run: |
+          docker build --progress=plain -t $DOCKER_IMAGE_NAME -f Dockerfile .
+
       - name: Scraper backend
-        run: |          
-          aws configure list
-          docker build --progress=plain -t this-image -f Dockerfile .
-          docker run -it \
+        run: |
+          docker run \
             -v /tmp:/tmp \
             --user 1001:1001 \
             --env AWS_REGION=${{ vars.AWS_REGION }} \
@@ -60,7 +64,7 @@ jobs:
             --env INPUT_RUNNING=${{ inputs.running }} \
             --env BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
             --env DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
-            this-image \
+            $DOCKER_IMAGE_NAME \
             /bin/bash -c '
 
               # tmp ownership
@@ -114,9 +118,7 @@ jobs:
 
       - name: Scraper frontend
         run: |
-          aws configure list
-          docker build --progress=plain -t this-image -f Dockerfile .
-          docker run -it \
+          docker run \
             -v /tmp:/tmp \
             --user 1001:1001 \
             --env AWS_REGION=${{ vars.AWS_REGION }} \
@@ -130,7 +132,7 @@ jobs:
             --env INPUT_RUNNING=${{ inputs.running }} \
             --env BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
             --env DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
-            this-image \
+            $DOCKER_IMAGE_NAME \
             /bin/bash -c '
 
               # tmp ownership
