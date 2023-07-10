@@ -47,7 +47,7 @@ jobs:
             UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
             PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
       
-      - uses: ./.github/workflows/terragrunt.yml
+      - uses: ./.github/workflows/terragrunt
         with:
           environment: ${{ inputs.environment || 'KookaS' }}
           running: ${{ inputs.running }}
@@ -83,7 +83,7 @@ jobs:
             TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}
     
-      - uses: ./.github/workflows/terragrunt.yml
+      - uses: ./.github/workflows/terragrunt
         with:
           environment: ${{ inputs.environment || 'KookaS' }}
           running: ${{ inputs.running }}
