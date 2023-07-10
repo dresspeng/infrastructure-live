@@ -70,6 +70,7 @@ nuke-global:
 
 .ONESHELL: aws-auth
 aws-auth:
+	aws --version
 	aws configure set aws_access_key_id ${AWS_ACCESS_KEY} --profile ${AWS_PROFILE}
 	aws configure set --profile ${AWS_PROFILE} aws_secret_access_key ${AWS_SECRET_KEY} --profile ${AWS_PROFILE}
 	aws configure set region ${AWS_REGION} --profile ${AWS_PROFILE}

@@ -19,7 +19,7 @@ on:
   #   branches: [master]
 
 jobs:
-  prepare-backend:
+  scraper:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'KookaS' }}
     steps:
@@ -28,10 +28,11 @@ jobs:
 
       - name: Setup AWS CLI
         run: |
-          aws --version
-          aws configure set aws_access_key_id ${{ vars.AWS_ACCESS_KEY }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_KEY }}
-          aws configure set region ${{ vars.AWS_REGION }}
+          make aws-auth \
+          AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
+          AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
+          AWS_PROFILE=${{ vars.AWS_PROFILE }} \
+          AWS_REGION=${{ vars.AWS_REGION }}
       - name: Login to ECR
         env:
           ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
@@ -43,6 +44,7 @@ jobs:
           elif [[ $AWS_CLI_SERVICE == ecr-public ]]; then
             aws ecr-public get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS ---password-stdin public.ecr.aws
           fi
+
       - name: Scraper backend
         run: |          
           sudo docker build --progress=plain -t this-image -f Dockerfile .
@@ -104,7 +106,6 @@ jobs:
                 AWS_REGION=${AWS_REGION} \
                 AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
                 AWS_SECRET_KEY=${AWS_SECRET_KEY}
-              echo ${INPUT_RUNNING} == false
               if [[ ${INPUT_RUNNING} == false ]]; then
                 make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
               else
@@ -112,6 +113,7 @@ jobs:
                 make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
               fi
               '
+
       - name: Scraper frontend
         run: |          
           sudo docker build --progress=plain -t this-image -f Dockerfile .
@@ -165,7 +167,6 @@ jobs:
               make prepare-scraper-frontend \
                 TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
                 BRANCH_NAME=${BRANCH_NAME}
-              echo ${INPUT_RUNNING} == false
               if [[ ${INPUT_RUNNING} == false ]]; then
                 make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
               else
