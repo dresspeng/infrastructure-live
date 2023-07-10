@@ -1,24 +1,28 @@
 name: Terragrunt
 
 on:
-    workflow_call:
-        inputs:
-            environment:
-                type: string
-                description: 'The environment to deploy to'
-                required: true
-            running:
-                type: boolean
-                description: 'Up and running'     
-                required: true  
-            terragrunt_config_path:
-                type: string
-                description: 'the path where the hcl file is located for the microservice'     
-                required: true
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        description: 'The environment to deploy to'
+        required: true
+      running:
+        type: boolean
+        description: 'Up and running'     
+        required: true  
+      terragrunt_config_path:
+        type: string
+        description: 'the path where the hcl file is located for the microservice'     
+        required: true
+      aws_secret_key:
+        type: string
+        description: 'The aws secret key'
+        required: true
 
 env:
-    TERRAFORM_VERSION: 1.4.6
-    TERRAGRUNT_VERSION: 0.45.17
+  TERRAFORM_VERSION: 1.4.6
+  TERRAGRUNT_VERSION: 0.45.17
 
 jobs:
   deployment:
@@ -31,7 +35,7 @@ jobs:
       AWS_PROFILE: ${{ vars.AWS_PROFILE }}
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
-      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      AWS_SECRET_KEY: ${{ inputs.aws_secret_key }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
