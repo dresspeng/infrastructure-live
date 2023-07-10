@@ -1,7 +1,3 @@
-dependency "backend" {
-  config_path = "../backend"
-}
-
 include {
   path = find_in_parent_folders()
 }
@@ -116,15 +112,6 @@ locals {
 }
 
 terraform {
-  before_hook "env" {
-    commands = ["init"]
-    execute = [
-      "/bin/bash",
-      "-c",
-      "echo NEXT_PUBLIC_API_URL=${dependency.backend.outputs.microservice.ecs.elb.lb_dns_name} >> ${get_terragrunt_dir()}/${local.env_local_path}"
-    ]
-  }
-
   source = "git::git@${local.modules_git_host_name}:${local.modules_organization_name}/${local.modules_repository_name}.git//module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
 }
 

@@ -48,7 +48,7 @@ jobs:
         run: |
           docker build --progress=plain -t $DOCKER_IMAGE_NAME -f Dockerfile .
 
-      - name: Scraper backend
+      - name: Scraper
         run: |
           docker run \
             -v /tmp:/tmp \
@@ -64,6 +64,11 @@ jobs:
             --env INPUT_RUNNING=${{ inputs.running }} \
             --env BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
             --env DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
+            --env FLICKR_PRIVATE_KEY=${{ secrets.FLICKR_PRIVATE_KEY }} \
+            --env FLICKR_PUBLIC_KEY=${{ secrets.FLICKR_PUBLIC_KEY }} \
+            --env UNSPLASH_PRIVATE_KEY=${{ secrets.UNSPLASH_PRIVATE_KEY }} \
+            --env UNSPLASH_PUBLIC_KEY=${{ secrets.UNSPLASH_PUBLIC_KEY }} \
+            --env PEXELS_PUBLIC_KEY=${{ secrets.PEXELS_PUBLIC_KEY }} \
             $DOCKER_IMAGE_NAME \
             /bin/bash -c '
 
@@ -96,7 +101,9 @@ jobs:
                 DOMAIN_NAME=${DOMAIN_NAME} \
                 AWS_REGION=${AWS_REGION} \
                 AWS_PROFILE=${AWS_PROFILE} \
-                AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}         
+                AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
+
+              # backend
               make prepare-scraper-backend \
                 TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
                 BRANCH_NAME=${BRANCH_NAME} \
@@ -114,60 +121,14 @@ jobs:
                 make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
                 make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
               fi
-              '
 
-      - name: Scraper frontend
-        run: |
-          docker run \
-            -v /tmp:/tmp \
-            --user 1001:1001 \
-            --env AWS_REGION=${{ vars.AWS_REGION }} \
-            --env AWS_PROFILE=${{ vars.AWS_PROFILE }} \
-            --env AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
-            --env AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
-            --env AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }} \
-            --env GITHUB_TOKEN=${{ secrets.GH_TERRA_TOKEN }} \
-            --env SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}" \
-            --env SSH_PUBLIC_KEY="${{ vars.SSH_PUBLIC_KEY }}" \
-            --env INPUT_RUNNING=${{ inputs.running }} \
-            --env BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
-            --env DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
-            $DOCKER_IMAGE_NAME \
-            /bin/bash -c '
-
-              # tmp ownership
-              sudo mkdir -p /tmp/out
-              sudo chown 1001:1001 /tmp/out
-              sudo chmod g+s /tmp/out
-              ls -l /tmp/out
-
-              # aws
-              make aws-auth
-
-              # github token
-              make gh-auth-check
-
-              # ssh
-              eval `ssh-agent -s`
-              mkdir -p ~/.ssh
-              SSH_FOLDER=$(cd ~/.ssh; pwd)
-              echo ${SSH_FOLDER}
-              echo "${SSH_PRIVATE_KEY}" > ~/.ssh/action
-              echo "${SSH_PUBLIC_KEY}" > ~/.ssh/action.pub
-              sudo chmod -R 600 ${SSH_FOLDER}/action
-              ssh-add ~/.ssh/action
-              ssh-keyscan github.com >> ~/.ssh/known_hosts
-              cat ~/.ssh/known_hosts
-
-              # terragrunt
-              make prepare-terragrunt \
-                DOMAIN_NAME=${DOMAIN_NAME} \
-                AWS_REGION=${AWS_REGION} \
-                AWS_PROFILE=${AWS_PROFILE} \
-                AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}         
+              # frontend
+              export NEXT_PUBLIC_API_URL=$(terraform output -state=live/aws/region/scraper/backend/terraform.tfstate -json  microservice | jq '.ecs.elb.lb_dns_name')
+              echo BACKEND DNS URL ::: ${NEXT_PUBLIC_API_URL}
               make prepare-scraper-frontend \
                 TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
-                BRANCH_NAME=${BRANCH_NAME}
+                BRANCH_NAME=${BRANCH_NAME} \
+                NEXT_PUBLIC_API_URL=$(terraform output -state=live/aws/region/scraper/backend/terraform.tfstate -json  microservice | jq '.ecs.elb.lb_dns_name')
               if [[ ${INPUT_RUNNING} == false ]]; then
                 make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
               else

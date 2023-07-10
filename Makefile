@@ -124,7 +124,8 @@ find-override-files:
 
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
-	make prepare-convention-config-file OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
+	make prepare-convention-config-file \
+		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
 	make prepare-aws-account-config-file \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		DOMAIN_NAME=${DOMAIN_NAME} \
@@ -168,7 +169,20 @@ prepare-microservice-config-file:
 		branch_name = "${BRANCH_NAME}"
 	}
 	EOF
-
+prepare-state-file:
+	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
+	$(eval branches=$(shell make gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
+	if [[ '$(shell echo ${branches} | grep -o "${BRANCH_NAME}" | wc -l)' == '0' ]]; then
+		$(eval BRANCH_NAME_MICROSERVICE=${DEFAULT_BRANCH_NAME})
+		echo -e '\033[43mWarning\033[0m' ::: BRANCH_NAME ${BRANCH_NAME} not found, using ${DEFAULT_BRANCH_NAME}
+		$(eval BUCKET_STATE_NAME=$(echo ${PREFIX_NAME}-${BRANCH_NAME_MICROSERVICE}-tf-state | tr A-Z a-z))
+		aws s3api get-object --bucket ${BUCKET_STATE_NAME} --key ${REPOSITORY_CONFIG_PATH_FILE_FROM} ${REPOSITORY_CONFIG_PATH_FILE_TO}
+	else
+		$(eval BRANCH_NAME_MICROSERVICE=${BRANCH_NAME})
+		$(eval BUCKET_STATE_NAME=$(echo ${PREFIX_NAME}-${BRANCH_NAME_MICROSERVICE}-tf-state | tr A-Z a-z))
+		aws s3api get-object --bucket ${BUCKET_STATE_NAME} --key ${REPOSITORY_CONFIG_PATH_FILE_FROM} ${REPOSITORY_CONFIG_PATH_FILE_TO}
+	fi
+	
 prepare-microservice:
 	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
 	$(eval branches=$(shell make gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
@@ -262,7 +276,6 @@ prepare-scraper-frontend:
 	$(eval REPOSITORY_NAME=scraper-frontend)
 	$(eval REPOSITORY_CONFIG_PATH_FOLDER=config)
 	$(eval DEFAULT_BRANCH_NAME=master)
-	$(eval NEXT_PUBLIC_API_URL=defined-in-hcl)
 
 	make prepare-microservice \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
