@@ -107,7 +107,7 @@ jobs:
           NEXT_PUBLIC_API_URL=$(make output-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend | jq '.ecs.elb.lb_dns_name')
           if [[ -z ${NEXT_PUBLIC_API_URL} ]]; then
             echo -e '\033[41mBACKEND_DNS_URL\033[0m' ::: ${NEXT_PUBLIC_API_URL}
-            # exit 42
+            exit 42
           else
             echo -e '\033[44mBACKEND_DNS_URL\033[0m' ::: ${NEXT_PUBLIC_API_URL}
           fi

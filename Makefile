@@ -125,20 +125,6 @@ gh-load-config-file:
 list-override-files:
 	find ./live -type f -name "*${OVERRIDE_EXTENSION}*"
 
-get-state-file:
-	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
-	$(eval branches=$(shell make gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
-	if [[ '$(shell echo ${branches} | grep -o "${BRANCH_NAME}" | wc -l)' == '0' ]]; then
-		$(eval BRANCH_NAME_MICROSERVICE=${DEFAULT_BRANCH_NAME})
-		echo -e '\033[43mWarning\033[0m' ::: BRANCH_NAME ${BRANCH_NAME} not found, using ${DEFAULT_BRANCH_NAME}
-		$(eval BUCKET_STATE_NAME=$(shell echo ${ORGANIZATION_NAME}-${REPOSITORY_NAME}-${BRANCH_NAME_MICROSERVICE}-tf-state | tr A-Z a-z))
-		aws s3api get-object --bucket ${BUCKET_STATE_NAME} --key ${TERRAGRUNT_CONFIG_PATH_FILE_FROM} ${TERRAGRUNT_CONFIG_PATH_FILE_TO}
-	else
-		$(eval BRANCH_NAME_MICROSERVICE=${BRANCH_NAME})
-		$(eval BUCKET_STATE_NAME=$(shell echo ${ORGANIZATION_NAME}-${REPOSITORY_NAME}-${BRANCH_NAME_MICROSERVICE}-tf-state | tr A-Z a-z))
-		aws s3api get-object --bucket ${BUCKET_STATE_NAME} --key ${TERRAGRUNT_CONFIG_PATH_FILE_FROM} ${TERRAGRUNT_CONFIG_PATH_FILE_TO}
-	fi
-
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
 	make prepare-convention-config-file \
