@@ -33,6 +33,7 @@ fmt: ## Format all files
 .ONESHELL: clean
 clean: ## Clean the test environment
 	make nuke-region
+	make nuke-ecs
 	make nuke-vpc
 	make nuke-global
 
@@ -65,6 +66,8 @@ nuke-region:
 	cloud-nuke aws --region ${AWS_REGION} --config .gruntwork/cloud-nuke/config.yaml --force;
 nuke-vpc:
 	cloud-nuke aws --region ${AWS_REGION} --resource-type vpc --force;
+nuke-ecs:
+	cloud-nuke aws --region ${AWS_REGION} --resource-type ecs --force;
 nuke-global:
 	cloud-nuke aws --region global --config .gruntwork/cloud-nuke/config.yaml --force;
 

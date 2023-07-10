@@ -193,10 +193,12 @@ inputs = {
             ContainerPath = "/run/npm"
             Size          = 1024
           }
-          environment = {
-            name  = "TMPFS_NPM"
-            value = "/run/npm"
-          }
+          environment = [
+            {
+              name  = "TMPFS_NPM"
+              value = "/run/npm"
+            }
+          ]
         }
       )
       ec2     = local.ec2
