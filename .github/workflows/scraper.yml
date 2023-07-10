@@ -44,6 +44,7 @@ jobs:
 
       - name: Scraper backend
         run: |          
+          aws configure list
           sudo docker build --progress=plain -t this-image -f Dockerfile .
           sudo docker run -it \
             -v /tmp:/tmp \
@@ -112,7 +113,8 @@ jobs:
               '
 
       - name: Scraper frontend
-        run: |          
+        run: |
+          aws configure list
           sudo docker build --progress=plain -t this-image -f Dockerfile .
           sudo docker run -it \
             -v /tmp:/tmp \
