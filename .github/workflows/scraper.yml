@@ -48,12 +48,12 @@ jobs:
             aws ecr-public get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS ---password-stdin public.ecr.aws
           fi
 
-      - uses: webfactory/ssh-agent@v0.7.0
+      - uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       
       - name: Setup Terraform v${{ env.TERRAFORM_VERSION }}
-        uses: hashicorp/setup-Terraform@v1
+        uses: hashicorp/setup-Terraform@v2
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: true
