@@ -15,10 +15,6 @@ on:
         type: string
         description: 'the path where the hcl file is located for the microservice'     
         required: true
-      aws_secret_key:
-        type: string
-        description: 'The aws secret key'
-        required: true
 
 env:
   TERRAFORM_VERSION: 1.4.6
@@ -35,7 +31,7 @@ jobs:
       AWS_PROFILE: ${{ vars.AWS_PROFILE }}
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
-      AWS_SECRET_KEY: ${{ inputs.aws_secret_key }}
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3

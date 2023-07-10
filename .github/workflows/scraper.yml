@@ -22,6 +22,8 @@ jobs:
   prepare-backend:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'KookaS' }}
+    outputs:
+      AWS_SECRET_KEY: ${{ steps.get-output.outputs.AWS_SECRET_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -46,26 +48,23 @@ jobs:
             UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
             UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
             PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY}
-      
-      - uses: ./.github/workflows/terragrunt
-        with:
-          environment: ${{ inputs.environment || 'KookaS' }}
-          running: ${{ inputs.running }}
-          terragrunt_config_path: live/aws/region/scraper/backend
-          aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
-          
-  # run-backend:
-  #   needs: [prepare-backend]
-  #   uses: ./.github/workflows/terragrunt.yml
-  #   with:
-  #     environment: ${{ inputs.environment || 'KookaS' }}
-  #     running: ${{ inputs.running }}
-  #     terragrunt_config_path: live/aws/region/scraper/backend
-  #   secrets:
-  #     AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+
+      - name: Save env
+        id: get-output
+        run: echo "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}" >> $GITHUB_OUTPUT
+  
+  run-backend:
+    needs: [prepare-backend]
+    uses: ./.github/workflows/terragrunt.yml
+    with:
+      environment: ${{ inputs.environment || 'KookaS' }}
+      running: ${{ inputs.running }}
+      terragrunt_config_path: live/aws/region/scraper/backend
+    secrets:
+      AWS_SECRET_KEY: ${{ needs.prepare-backend.outputs.AWS_SECRET_KEY }}
 
   prepare-frontend:
-    needs: [prepare-backend]
+    needs: [run-backend]
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'KookaS' }}
     steps:
@@ -82,20 +81,13 @@ jobs:
           make prepare-scraper-frontend \
             TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}
-    
-      - uses: ./.github/workflows/terragrunt
-        with:
-          environment: ${{ inputs.environment || 'KookaS' }}
-          running: ${{ inputs.running }}
-          terragrunt_config_path: live/aws/region/scraper/backend
-          aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
   
-  # run-frontend:
-  #   needs: [prepare-frontend]
-  #   uses: ./.github/workflows/terragrunt.yml
-  #   with:
-  #     environment: ${{ inputs.environment || 'KookaS' }}
-  #     running: ${{ inputs.running }}
-  #     terragrunt_config_path: live/aws/region/scraper/frontend
-  #   secrets:
-  #     aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
+  run-frontend:
+    needs: [prepare-frontend]
+    uses: ./.github/workflows/terragrunt.yml
+    with:
+      environment: ${{ inputs.environment || 'KookaS' }}
+      running: ${{ inputs.running }}
+      terragrunt_config_path: live/aws/region/scraper/frontend
+    secrets:
+      AWS_SECRET_KEY: ${{ needs.prepare-backend.outputs.AWS_SECRET_KEY }}
