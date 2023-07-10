@@ -134,25 +134,25 @@ jobs:
 
       - name: Terragrunt destroy
         id: destroy
-        if: inputs.running == 'false'
+        if: inputs.running == false
         run: |
             make destroy-ecs TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }}
 
       - name: Terragrunt init
         id: init
-        if: inputs.running == 'true'
+        if: inputs.running == true
         run: |
           make init TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }}
 
       - name: Terragrunt validate
         id: validate
-        if: inputs.running == 'true'
+        if: inputs.running == true
         run: |
           make validate TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }}
 
       - name: Terragrunt plan
         id: plan
-        if: github.event_name == 'pull_request' && inputs.running == 'true'
+        if: github.event_name == 'pull_request' && inputs.running == true
         continue-on-error: true
         run: |
           make plan TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }} OUTPUT_FILE=/tmp/plan.tmp
@@ -160,7 +160,7 @@ jobs:
 
       - name: Terraform - Show Plan in PR
         uses: actions/github-script@v6
-        if: github.event_name == 'pull_request' && inputs.running == 'true'
+        if: github.event_name == 'pull_request' && inputs.running == true
         with:
           github-token: ${{ secrets.GH_TERRA_TOKEN }}
           script: |
@@ -202,6 +202,6 @@ jobs:
             })
 
       - name: Terragrunt apply
-        if: github.event_name == 'workflow_dispatch' && inputs.running == 'true'
+        if: github.event_name == 'workflow_dispatch' && inputs.running == true
         run: |
           make apply TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }}
