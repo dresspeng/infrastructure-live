@@ -124,7 +124,12 @@ find-override-files:
 .ONESHELL: prepare
 prepare-terragrunt: ## Setup the environment
 	make prepare-convention-config-file OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
-	make prepare-aws-account-config-file OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
+	make prepare-aws-account-config-file \
+		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+		DOMAIN_NAME=${DOMAIN_NAME} \
+		AWS_REGION=${AWS_REGION} \
+		AWS_PROFILE=${AWS_PROFILE} \
+		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
 .ONESHELL: prepare-account-aws
 prepare-convention-config-file:
 	$(eval MODULES_GIT_HOST=github.com)

@@ -27,7 +27,12 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Prepare terragrunt for all microservices
-        run: make prepare-terragrunt
+        run: |
+          make prepare-terragrunt \
+            DOMAIN_NAME=${{ vars.DOMAIN_NAME }} \
+            AWS_REGION=${{ vars.AWS_REGION }} \
+            AWS_PROFILE=${{ vars.AWS_PROFILE }} \
+            AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
 
       - name: Prepare terragrunt for backend
         env: 
@@ -49,19 +54,26 @@ jobs:
             AWS_REGION=${{ vars.AWS_REGION }} \
             AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
             AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
-          make find-override-files
+          if [[ ${{ inputs.running }} == false ]]; then
+            make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+          else
+            make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+            make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+          fi
   
-  run-backend:
-    needs: [prepare-backend]
-    uses: ./.github/workflows/terragrunt.yml
-    with:
-      environment: ${{ inputs.environment || 'KookaS' }}
-      running: ${{ inputs.running }}
-      terragrunt_config_path: live/aws/region/scraper/backend
-    secrets: inherit
+  # # FIXME: files created above are missing in reusable workflow
+  # run-backend:
+  #   needs: [prepare-backend]
+  #   uses: ./.github/workflows/terragrunt.yml
+  #   with:
+  #     environment: ${{ inputs.environment || 'KookaS' }}
+  #     running: ${{ inputs.running }}
+  #     terragrunt_config_path: live/aws/region/scraper/backend
+  #   secrets: inherit
 
   prepare-frontend:
-    needs: [run-backend]
+    # needs: [run-backend]
+    needs: [prepare-backend]
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'KookaS' }}
     steps:
@@ -78,13 +90,19 @@ jobs:
           make prepare-scraper-frontend \
             TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}
-          make find-override-files
+          if [[ ${{ inputs.running }} == false ]]; then
+            make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+          else
+            make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+            make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+          fi
   
-  run-frontend:
-    needs: [prepare-frontend]
-    uses: ./.github/workflows/terragrunt.yml
-    with:
-      environment: ${{ inputs.environment || 'KookaS' }}
-      running: ${{ inputs.running }}
-      terragrunt_config_path: live/aws/region/scraper/frontend
-    secrets: inherit
+  # # FIXME: files created above are missing in reusable workflow
+  # run-frontend:
+  #   needs: [prepare-frontend]
+  #   uses: ./.github/workflows/terragrunt.yml
+  #   with:
+  #     environment: ${{ inputs.environment || 'KookaS' }}
+  #     running: ${{ inputs.running }}
+  #     terragrunt_config_path: live/aws/region/scraper/frontend
+  #   secrets: inherit
