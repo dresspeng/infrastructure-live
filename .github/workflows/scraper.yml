@@ -88,7 +88,7 @@ jobs:
             AWS_REGION=${{ vars.AWS_REGION }} \
             AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
             AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
-          if [[ ${INPUT_RUNNING} == false ]]; then
+          if [[ ${{ inputs.running }} == false ]]; then
             make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
           else
             make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
@@ -104,7 +104,7 @@ jobs:
             TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}  \
             NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-          if [[ ${INPUT_RUNNING} == false ]]; then
+          if [[ ${{ inputs.running }} == false ]]; then
             make destroy-ecs TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
           else
             make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
