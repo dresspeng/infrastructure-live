@@ -45,8 +45,8 @@ jobs:
       - name: Scraper backend
         run: |          
           aws configure list
-          sudo docker build --progress=plain -t this-image -f Dockerfile .
-          sudo docker run -it \
+          docker build --progress=plain -t this-image -f Dockerfile .
+          docker run -it \
             -v /tmp:/tmp \
             --user 1001:1001 \
             --env AWS_REGION=${{ vars.AWS_REGION }} \
@@ -115,8 +115,8 @@ jobs:
       - name: Scraper frontend
         run: |
           aws configure list
-          sudo docker build --progress=plain -t this-image -f Dockerfile .
-          sudo docker run -it \
+          docker build --progress=plain -t this-image -f Dockerfile .
+          docker run -it \
             -v /tmp:/tmp \
             --user 1001:1001 \
             --env AWS_REGION=${{ vars.AWS_REGION }} \
