@@ -2,7 +2,7 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/ubuntu
 {
 	"name": "Alpine",
-	"image": "401582117818.dkr.ecr.us-west-1.amazonaws.com/kookas-infrastructure-modules-master-devcontainer:latest",
+	"image": "401582117818.dkr.ecr.us-west-1.amazonaws.com/dresspeng-infrastructure-modules-master-devcontainer:latest",
 	"runArgs": [
 		"--env-file",
 		".devcontainer/devcontainer.env"

@@ -9,33 +9,43 @@ locals {
   service_vars      = read_terragrunt_config("${get_terragrunt_dir()}/service.hcl")
   service_tmp_vars  = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
 
-  override_extension_name   = local.convention_vars.locals.override_extension_name
-  modules_git_host_name     = local.convention_vars.locals.modules_git_host_name
-  modules_organization_name = local.convention_vars.locals.modules_organization_name
-  modules_repository_name   = local.convention_vars.locals.modules_repository_name
-  modules_branch_name       = local.convention_vars.locals.modules_branch_name
+  override_extension_name       = local.convention_vars.locals.override_extension_name
+  modules_git_host_auth_method  = local.convention_vars.locals.modules_git_host_auth_method
+  modules_git_host_name         = local.convention_vars.locals.modules_git_host_name
+  modules_organization_name     = local.convention_vars.locals.modules_organization_name
+  modules_repository_name       = local.convention_vars.locals.modules_repository_name
+  modules_repository_visibility = local.convention_vars.locals.modules_repository_visibility
+  modules_branch_name           = local.convention_vars.locals.modules_branch_name
+
+  modules_git_prefix = format("%s%s",
+    local.modules_git_host_auth_method == "ssh" ? "git::git@${local.modules_git_host_name}:" : (
+      local.modules_git_host_auth_method == "https" ? "git::https://${local.modules_repository_visibility == "private" ? "oauth2:${get_env("GITHUB_TOKEN")}" : ""}@${local.modules_git_host_name}/" : null
+    ),
+    "${local.modules_organization_name}/${local.modules_repository_name}.git"
+  )
 
   domain_name         = local.account_vars.locals.domain_name
   account_region_name = local.account_vars.locals.account_region_name
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  cidr_ipv4          = local.service_vars.locals.cidr_ipv4
-  vpc_tier           = local.service_vars.locals.vpc_tier
-  project_name       = local.service_vars.locals.project_name
-  service_name       = local.service_vars.locals.service_name
-  git_host_name      = local.service_vars.locals.git_host_name
-  organization_name  = local.service_vars.locals.organization_name
-  repository_name    = local.service_vars.locals.repository_name
-  image_tag          = local.service_vars.locals.image_tag
-  deployment_type    = local.service_vars.locals.deployment_type
-  pricing_names      = local.service_vars.locals.pricing_names
-  os                 = local.service_vars.locals.os
-  os_version         = local.service_vars.locals.os_version
-  architecture       = local.service_vars.locals.architecture
-  task_min_count     = local.service_vars.locals.task_min_count
-  task_desired_count = local.service_vars.locals.task_desired_count
-  task_max_count     = local.service_vars.locals.task_max_count
+  cidr_ipv4             = local.service_vars.locals.cidr_ipv4
+  vpc_tier              = local.service_vars.locals.vpc_tier
+  project_name          = local.service_vars.locals.project_name
+  service_name          = local.service_vars.locals.service_name
+  git_host_name         = local.service_vars.locals.git_host_name
+  organization_name     = local.service_vars.locals.organization_name
+  repository_name       = local.service_vars.locals.repository_name
+  repository_visibility = local.service_vars.locals.repository_visibility
+  image_tag             = local.service_vars.locals.image_tag
+  deployment_type       = local.service_vars.locals.deployment_type
+  pricing_names         = local.service_vars.locals.pricing_names
+  os                    = local.service_vars.locals.os
+  os_version            = local.service_vars.locals.os_version
+  architecture          = local.service_vars.locals.architecture
+  task_min_count        = local.service_vars.locals.task_min_count
+  task_desired_count    = local.service_vars.locals.task_desired_count
+  task_max_count        = local.service_vars.locals.task_max_count
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
@@ -122,7 +132,8 @@ terraform {
     ]
   }
 
-  source = "git::git@${local.modules_git_host_name}:${local.modules_organization_name}/${local.modules_repository_name}.git//module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
+  source = "${local.modules_git_prefix}//module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
+
 }
 
 inputs = {
@@ -202,8 +213,9 @@ inputs = {
         local.microservice_vars.locals.ecs.task_definition,
         local.task_definition,
         {
-          env_bucket_name      = local.env_bucket_name,
-          env_file_name        = local.env_key
+          env_bucket_name = local.env_bucket_name,
+          env_file_name   = local.env_key
+          # TODO: add if public or private repo
           repository_name      = local.name
           repository_image_tag = local.image_tag
         }

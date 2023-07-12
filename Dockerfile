@@ -1,6 +1,6 @@
 ARG AWS_REGION_NAME=us-west-1
 ARG AWS_ACCOUNT_ID=401582117818
-ARG AWS_ECR_REPOSITORY=kookas-infrastructure-modules-master-bin
+ARG AWS_ECR_REPOSITORY=dresspeng-infrastructure-modules-master-bin
 ARG VARIANT=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION_NAME.amazonaws.com/$AWS_ECR_REPOSITORY
 
 FROM ${VARIANT}

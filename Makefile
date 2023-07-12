@@ -143,18 +143,22 @@ prepare-terragrunt: ## Setup the environment
 		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
 .ONESHELL: prepare-account-aws
 prepare-convention-config-file:
+  	$(eval MODULES_GIT_HOST_AUTH_METHOD=https)
 	$(eval MODULES_GIT_HOST=github.com)
-	$(eval MODULES_ORGANIZATION_NAME=KookaS)
+	$(eval MODULES_ORGANIZATION_NAME=dresspeng)
 	$(eval MODULES_PROJECT_NAME=infrastructure)
 	$(eval MODULES_SERVICE_NAME=modules)
+	$(eval MODULES_REPOSITORY_VISIBILITY=public)
 	$(eval MODULES_BRANCH_NAME=master)
 	cat <<-EOF > ${PATH_ABS_LIVE}/convention_${OVERRIDE_EXTENSION}.hcl 
 	locals {
-		override_extension_name		= "${OVERRIDE_EXTENSION}"
-		modules_git_host_name		= "${MODULES_GIT_HOST}"
-		modules_organization_name	= "${MODULES_ORGANIZATION_NAME}"
-		modules_repository_name		= "${MODULES_PROJECT_NAME}-${MODULES_SERVICE_NAME}"
-		modules_branch_name			= "${MODULES_BRANCH_NAME}"
+		override_extension_name			= "${OVERRIDE_EXTENSION}"
+		modules_git_host_auth_method 	= "${MODULES_GIT_HOST_AUTH_METHOD}"
+		modules_git_host_name			= "${MODULES_GIT_HOST}"
+		modules_organization_name		= "${MODULES_ORGANIZATION_NAME}"
+		modules_repository_name			= "${MODULES_PROJECT_NAME}-${MODULES_SERVICE_NAME}"
+		modules_repository_visibility 	= "${MODULES_REPOSITORY_VISIBILITY}"
+		modules_branch_name				= "${MODULES_BRANCH_NAME}"
 		tags = {
 			"Git Module" 	= "${MODULES_GIT_HOST}/${MODULES_ORGANIZATION_NAME}/${MODULES_PROJECT_NAME}-${MODULES_SERVICE_NAME}@${MODULES_BRANCH_NAME}"
 		}
@@ -220,7 +224,7 @@ test:
 .ONESHELL: prepare-scraper-backend
 prepare-scraper-backend:
 	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend)
-	$(eval ORGANIZATION_NAME=KookaS)
+	$(eval ORGANIZATION_NAME=dresspeng)
 	$(eval REPOSITORY_NAME=scraper-backend)
 	$(eval REPOSITORY_CONFIG_PATH_FOLDER=config)
 	$(eval DEFAULT_BRANCH_NAME=master)
@@ -268,7 +272,7 @@ prepare-scraper-backend-env:
 .ONESHELL: prepare-scraper-frontend
 prepare-scraper-frontend:
 	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend)
-	$(eval ORGANIZATION_NAME=KookaS)
+	$(eval ORGANIZATION_NAME=dresspeng)
 	$(eval REPOSITORY_NAME=scraper-frontend)
 	$(eval REPOSITORY_CONFIG_PATH_FOLDER=config)
 	$(eval DEFAULT_BRANCH_NAME=master)
