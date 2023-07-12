@@ -77,7 +77,7 @@ locals {
         instance_type = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].name
       }
     )
-    if !local.use_fargate
+    if local.deployment_type == "ec2"
   }
 
 
@@ -92,7 +92,7 @@ locals {
     {
       capacity_provider = { for pricing_name in local.pricing_names :
         pricing_name => local.fargate_microservice.capacity_provider[pricing_name]
-        if local.use_fargate
+        if local.deployment_type == "fargate"
       }
   })
 
@@ -129,10 +129,17 @@ inputs = {
       cidr_ipv4 = local.cidr_ipv4
       tier      = local.vpc_tier
     }
+
+    iam = {
+      scope = "accounts"
+    }
+
     route53 = {
-      zone = {
-        name = local.domain_name
-      }
+      zones = [
+        {
+          name = local.domain_name
+        }
+      ]
       record = {
         extensions     = ["www"]
         subdomain_name = format("%s%s", local.branch_name == "master" ? "" : "${local.branch_name}.", local.repository_name)

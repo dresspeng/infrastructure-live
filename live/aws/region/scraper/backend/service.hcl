@@ -10,15 +10,18 @@ locals {
   organization_name  = "KookaS"
   repository_name    = "scraper-backend"
   image_tag          = "latest"
-  use_fargate        = false
   pricing_names      = ["on-demand"]
   os                 = "linux"
   os_version         = "2023"
   architecture       = "x64"
+  deployment_type    = "ec2"
   ec2_instance_key   = "t3_small"
   task_min_count     = 0
   task_desired_count = 1
   task_max_count     = 1
+  iam = {
+    scope = "accounts"
+  }
 
   tags = {
     "Git Microservice" = "${local.git_host_name}/${local.organization_name}/${local.repository_name}@${local.branch_name}"

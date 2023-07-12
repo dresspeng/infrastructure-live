@@ -10,11 +10,11 @@ locals {
   organization_name  = "KookaS"
   repository_name    = "scraper-frontend"
   image_tag          = "latest"
-  use_fargate        = false
   pricing_names      = ["on-demand"]
   os                 = "linux"
   os_version         = "2023"
   architecture       = "x64"
+  deployment_type    = "ec2"
   ec2_instance_key   = "t3_small"
   task_min_count     = 0
   task_desired_count = 1
