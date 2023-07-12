@@ -5,12 +5,12 @@ on:
     inputs:
       environment:
         type: environment
-        description: 'The environment to deploy to'
+        description: "The environment to deploy to"
         required: true
         default: KookaS
       running:
         type: boolean
-        description: 'Up and running'
+        description: "Up and running"
         required: true
         default: true
   # push:
@@ -40,18 +40,18 @@ jobs:
           aws --version
           aws configure set aws_access_key_id ${{ vars.AWS_ACCESS_KEY }}
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_KEY }}
-          aws configure set region ${{ vars.AWS_REGION }}
+          aws configure set region ${{ vars.AWS_REGION_NAME }}
           aws configure list
           if [[ $AWS_CLI_SERVICE == ecr ]]; then
-            aws ecr get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS --password-stdin ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+            aws ecr get-login-password --region ${{ vars.AWS_REGION_NAME }} | docker login --username AWS --password-stdin ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION_NAME }}.amazonaws.com
           elif [[ $AWS_CLI_SERVICE == ecr-public ]]; then
-            aws ecr-public get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS ---password-stdin public.ecr.aws
+            aws ecr-public get-login-password --region ${{ vars.AWS_REGION_NAME }} | docker login --username AWS ---password-stdin public.ecr.aws
           fi
 
       - uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      
+
       - name: Setup Terraform v${{ env.TERRAFORM_VERSION }}
         uses: hashicorp/setup-Terraform@v2
         with:
@@ -74,8 +74,8 @@ jobs:
         run: |
           make prepare-terragrunt \
             DOMAIN_NAME=${{ vars.DOMAIN_NAME }}  \
-            AWS_REGION=${{ vars.AWS_REGION }} \
-            AWS_PROFILE=${{ vars.AWS_PROFILE }}  \
+            AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
+            AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }}  \
             AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
 
       - name: Terragrunt backend
@@ -90,7 +90,7 @@ jobs:
             UNSPLASH_PRIVATE_KEY=${{ secrets.UNSPLASH_PRIVATE_KEY }} \
             UNSPLASH_PUBLIC_KEY=${{ secrets.UNSPLASH_PUBLIC_KEY }} \
             PEXELS_PUBLIC_KEY=${{ secrets.PEXELS_PUBLIC_KEY }} \
-            AWS_REGION=${{ vars.AWS_REGION }} \
+            AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
             AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
             AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
           make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
@@ -135,8 +135,8 @@ jobs:
       #     docker run \
       #       -v /tmp:/tmp \
       #       --user 1001:1001 \
-      #       --env AWS_REGION=${{ vars.AWS_REGION }} \
-      #       --env AWS_PROFILE=${{ vars.AWS_PROFILE }} \
+      #       --env AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
+      #       --env AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }} \
       #       --env AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
       #       --env AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
       #       --env AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }} \
@@ -181,8 +181,8 @@ jobs:
       #         # terragrunt
       #         make prepare-terragrunt \
       #           DOMAIN_NAME=${DOMAIN_NAME} \
-      #           AWS_REGION=${AWS_REGION} \
-      #           AWS_PROFILE=${AWS_PROFILE} \
+      #           AWS_REGION_NAME=${AWS_REGION_NAME} \
+      #           AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
       #           AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
 
       #         # backend
@@ -194,14 +194,14 @@ jobs:
       #           UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
       #           UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
       #           PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
-      #           AWS_REGION=${AWS_REGION} \
+      #           AWS_REGION_NAME=${AWS_REGION_NAME} \
       #           AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
       #           AWS_SECRET_KEY=${AWS_SECRET_KEY}
       #         make init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-      # 
+      #
       #         if [[ ${INPUT_RUNNING} == false ]]; then
       #           make destroy-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
-      #         else      #           
+      #         else      #
       #           make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
       #         fi
 
@@ -220,7 +220,7 @@ jobs:
       #           make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
       #         fi
       #         '
-  
+
   # # FIXME: files created above are missing in reusable workflow
   # run-backend:
   #   needs: [prepare-backend]
@@ -230,7 +230,7 @@ jobs:
   #     running: ${{ inputs.running }}
   #     terragrunt_config_path: live/aws/region/scraper/backend
   #   secrets: inherit
-  
+
   # # FIXME: files created above are missing in reusable workflow
   # run-frontend:
   #   needs: [prepare-frontend]

@@ -63,21 +63,21 @@ clean-ecs:
 	for capacityProviderArn in $(shell aws ecs describe-capacity-providers --query 'capacityProviders[].capacityProviderArn'); do aws ecs   delete-capacity-provider --capacity-provider $$capacityProviderArn --query 'capacityProvider.capacityProviderArn'; done;
 
 nuke-region:
-	cloud-nuke aws --region ${AWS_REGION} --config .gruntwork/cloud-nuke/config.yaml --force;
+	cloud-nuke aws --region ${AWS_REGION_NAME} --config .gruntwork/cloud-nuke/config.yaml --force;
 nuke-vpc:
-	cloud-nuke aws --region ${AWS_REGION} --resource-type vpc --force;
+	cloud-nuke aws --region ${AWS_REGION_NAME} --resource-type vpc --force;
 nuke-ecs:
-	cloud-nuke aws --region ${AWS_REGION} --resource-type ecscluster --force;
+	cloud-nuke aws --region ${AWS_REGION_NAME} --resource-type ecscluster --force;
 nuke-global:
 	cloud-nuke aws --region global --config .gruntwork/cloud-nuke/config.yaml --force;
 
 .ONESHELL: aws-auth
 aws-auth:
 	aws --version
-	aws configure set aws_access_key_id ${AWS_ACCESS_KEY} --profile ${AWS_PROFILE}
-	aws configure set --profile ${AWS_PROFILE} aws_secret_access_key ${AWS_SECRET_KEY} --profile ${AWS_PROFILE}
-	aws configure set region ${AWS_REGION} --profile ${AWS_PROFILE}
-	aws configure set output 'text' --profile ${AWS_PROFILE}
+	aws configure set aws_access_key_id ${AWS_ACCESS_KEY} --profile ${AWS_PROFILE_NAME}
+	aws configure set --profile ${AWS_PROFILE_NAME} aws_secret_access_key ${AWS_SECRET_KEY} --profile ${AWS_PROFILE_NAME}
+	aws configure set region ${AWS_REGION_NAME} --profile ${AWS_PROFILE_NAME}
+	aws configure set output 'text' --profile ${AWS_PROFILE_NAME}
 	make aws-auth-check
 aws-auth-check:
 	aws configure list
@@ -121,6 +121,12 @@ gh-load-config-file:
 			-H "Authorization: Bearer ${GITHUB_TOKEN}" \
 			-H "X-GitHub-Api-Version: 2022-11-28" \
 			https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_CONFIG_PATH_FILE}?ref=${BRANCH_NAME}
+gh-get-default-branch:
+	curl -s -L \
+		-H "Accept: application/vnd.github+json" \
+		-H "Authorization: Bearer ${GITHUB_TOKEN}"\
+		-H "X-GitHub-Api-Version: 2022-11-28" \
+		https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/branches
 
 list-override-files:
 	find ./live -type f -name "*${OVERRIDE_EXTENSION}*"
@@ -132,8 +138,8 @@ prepare-terragrunt: ## Setup the environment
 	make prepare-aws-account-config-file \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		DOMAIN_NAME=${DOMAIN_NAME} \
-		AWS_REGION=${AWS_REGION} \
-		AWS_PROFILE=${AWS_PROFILE} \
+		AWS_REGION_NAME=${AWS_REGION_NAME} \
+		AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
 		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
 .ONESHELL: prepare-account-aws
 prepare-convention-config-file:
@@ -158,11 +164,11 @@ prepare-aws-account-config-file:
 	cat <<-EOF > ${PATH_ABS_AWS}/account_${OVERRIDE_EXTENSION}.hcl 
 	locals {
 		domain_name 			= "${DOMAIN_NAME}"
-		account_region_name		= "${AWS_REGION}"
-		account_name			= "${AWS_PROFILE}"
+		account_region_name		= "${AWS_REGION_NAME}"
+		account_name			= "${AWS_PROFILE_NAME}"
 		account_id				= "${AWS_ACCOUNT_ID}"
 		tags = {
-			"Account" = "${AWS_PROFILE}"
+			"Account" = "${AWS_PROFILE_NAME}"
 		}
 	}
 	EOF
@@ -240,7 +246,7 @@ prepare-scraper-backend:
 		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
 		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
 		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
-		AWS_REGION=${AWS_REGION} \
+		AWS_REGION_NAME=${AWS_REGION_NAME} \
 		AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
 		AWS_SECRET_KEY=${AWS_SECRET_KEY}
 prepare-scraper-backend-env:
@@ -255,7 +261,7 @@ prepare-scraper-backend-env:
 		UNSPLASH_PRIVATE_KEY=${UNSPLASH_PRIVATE_KEY} \
 		UNSPLASH_PUBLIC_KEY=${UNSPLASH_PUBLIC_KEY} \
 		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
-		AWS_REGION=${AWS_REGION} \
+		AWS_REGION_NAME=${AWS_REGION_NAME} \
 		AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
 		AWS_SECRET_KEY=${AWS_SECRET_KEY}
 

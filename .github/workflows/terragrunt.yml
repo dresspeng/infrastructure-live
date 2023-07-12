@@ -5,15 +5,15 @@ on:
     inputs:
       environment:
         type: string
-        description: 'The environment to deploy to'
+        description: "The environment to deploy to"
         required: true
       running:
         type: boolean
-        description: 'Up and running'     
-        required: true  
+        description: "Up and running"
+        required: true
       terragrunt_config_path:
         type: string
-        description: 'the path where the hcl file is located for the microservice'     
+        description: "the path where the hcl file is located for the microservice"
         required: true
 
 env:
@@ -27,8 +27,8 @@ jobs:
     environment: ${{ inputs.environment }}
     env:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      AWS_REGION: ${{ vars.AWS_REGION }}
-      AWS_PROFILE: ${{ vars.AWS_PROFILE }}
+      AWS_REGION_NAME: ${{ vars.AWS_REGION_NAME }}
+      AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
@@ -41,28 +41,28 @@ jobs:
           aws --version
           aws configure set aws_access_key_id $AWS_ACCESS_KEY
           aws configure set aws_secret_access_key $AWS_SECRET_KEY
-          aws configure set region $AWS_REGION
+          aws configure set region $AWS_REGION_NAME
 
       # # FIXME: there is no package for registry.terraform.io/hashicorp/aws there is no package for registry.terraform.io/hashicorp/null
       # - name: Login to ECR
       #   env:
-      #     ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+      #     ECR_REGISTRY_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION_NAME }}.amazonaws.com
       #     AWS_CLI_SERVICE: ecr
       #     ECR_IMAGE_TAG: latest
       #   run: |
       #     if [[ $AWS_CLI_SERVICE == ecr ]]; then
-      #       aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URI
+      #       aws ecr get-login-password --region $AWS_REGION_NAME | docker login --username AWS --password-stdin $ECR_REGISTRY_URI
       #     elif [[ $AWS_CLI_SERVICE == ecr-public ]]; then
-      #       aws ecr-public get-login-password --region $AWS_REGION | docker login --username AWS ---password-stdin public.ecr.aws
+      #       aws ecr-public get-login-password --region $AWS_REGION_NAME | docker login --username AWS ---password-stdin public.ecr.aws
       #     fi
       # - name: Terragrunt Plan
-      #   run: |          
+      #   run: |
       #     sudo docker build --progress=plain -t this-image -f Dockerfile .
       #     sudo docker run -it \
       #       -v /tmp:/tmp \
       #       --user 1001:1001 \
-      #       --env AWS_REGION=${AWS_REGION} \
-      #       --env AWS_PROFILE=${AWS_PROFILE} \
+      #       --env AWS_REGION_NAME=${AWS_REGION_NAME} \
+      #       --env AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
       #       --env AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
       #       --env AWS_SECRET_KEY=${AWS_SECRET_KEY} \
       #       --env AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
@@ -98,7 +98,7 @@ jobs:
       #         ssh-keyscan github.com >> ~/.ssh/known_hosts
       #         cat ~/.ssh/known_hosts
 
-      #         # terragrunt              
+      #         # terragrunt
       #         if [[ "${GH_EVENT}" == "down" ]]; then
       #           make scraper-prepare GITHUB_TOKEN=${GITHUB_TOKEN} SERVICE_UP=false
       #         else
@@ -115,7 +115,7 @@ jobs:
       - uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      
+
       - name: Setup Terraform v${{ env.TERRAFORM_VERSION }}
         uses: hashicorp/setup-Terraform@v1
         with:
@@ -137,7 +137,7 @@ jobs:
         id: destroy
         if: inputs.running == false
         run: |
-            make destroy-ecs TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }}
+          make destroy-ecs TERRAGRUNT_CONFIG_PATH=${{ inputs.terragrunt_config_path }}
 
       - name: Terragrunt init
         id: init
@@ -183,13 +183,13 @@ jobs:
             </details>
 
             #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
-            
+
             <details><summary>Show Plan</summary>
-            
+
             \`\`\`\n
             ${plan}
             \`\`\`
-            
+
             </details>
             ${truncated_message}
 

@@ -75,8 +75,8 @@ terragrunt graph-dependencies | dot -Tsvg > graph.svg
 #### devcontainer
 
 ```env
-AWS_REGION=***
-AWS_PROFILE=***
+AWS_REGION_NAME=***
+AWS_PROFILE_NAME=***
 AWS_ID=***
 AWS_ROLE=***
 AWS_ACCESS_KEY=***
