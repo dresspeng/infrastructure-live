@@ -13,10 +13,6 @@ on:
         description: "Up and running"
         required: true
         default: true
-  # push:
-  #   branches-ignore: [dependabot/**]
-  # pull_request:
-  #   branches: [master]
 
 env:
   TERRAFORM_VERSION: 1.4.6
@@ -220,23 +216,3 @@ jobs:
       #           make apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
       #         fi
       #         '
-
-  # # FIXME: files created above are missing in reusable workflow
-  # run-backend:
-  #   needs: [prepare-backend]
-  #   uses: ./.github/workflows/terragrunt.yml
-  #   with:
-  #     environment: ${{ inputs.environment || 'KookaS' }}
-  #     running: ${{ inputs.running }}
-  #     terragrunt_config_path: live/aws/region/scraper/backend
-  #   secrets: inherit
-
-  # # FIXME: files created above are missing in reusable workflow
-  # run-frontend:
-  #   needs: [prepare-frontend]
-  #   uses: ./.github/workflows/terragrunt.yml
-  #   with:
-  #     environment: ${{ inputs.environment || 'KookaS' }}
-  #     running: ${{ inputs.running }}
-  #     terragrunt_config_path: live/aws/region/scraper/frontend
-  #   secrets: inherit
