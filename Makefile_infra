@@ -36,6 +36,26 @@ __check_defined = \
 help:
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
+init:
+	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
+	terragrunt init --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH}
+validate:
+	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
+	terragrunt validate --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH}
+plan:
+	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
+	terragrunt plan --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -no-color -out=${OUTPUT_FILE} 2>&1
+apply:
+	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
+	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH}
+destroy-microservice:
+	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
+	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.microservice
+output-microservice:
+	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
+	terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json  microservice
+
+
 clean-cloudwatch:
 	for alarmName in $(shell aws cloudwatch describe-alarms --query 'MetricAlarms[].AlarmName'); do echo $$alarmName; aws cloudwatch delete-alarms --alarm-names $$alarmName; done;
 clean-task-definition:
