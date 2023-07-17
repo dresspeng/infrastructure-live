@@ -50,7 +50,7 @@ locals {
 
   config_vars = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
 
-  name = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}")
+  name = lower("${local.repository_name}-${local.branch_name}")
 
   pricing_name_spot      = local.microservice_vars.locals.pricing_name_spot
   pricing_name_on_demand = local.microservice_vars.locals.pricing_name_on_demand
@@ -116,7 +116,7 @@ locals {
   } : null
 
   env_key         = "${local.branch_name}.env"
-  env_local_path  = "${local.override_extension_name}.env"
+  env_local_path  = "${get_terragrunt_dir()}/${local.override_extension_name}.env"
   env_bucket_name = "${local.name}-env"
 
 }
@@ -127,7 +127,7 @@ terraform {
     execute = [
       "/bin/bash",
       "-c",
-      "echo COMMON_NAME=${local.name} >> ${get_terragrunt_dir()}/${local.env_local_path}"
+      "echo COMMON_NAME=${local.name} >> ${local.env_local_path}"
     ]
   }
 
@@ -136,8 +136,8 @@ terraform {
 }
 
 inputs = {
-  common_name = local.name
-  common_tags = merge(
+  name = local.name
+  tags = merge(
     local.convention_vars.locals.tags,
     local.account_vars.locals.tags,
     local.service_vars.locals.tags,
@@ -154,22 +154,22 @@ inputs = {
       scope = "accounts"
     }
 
-    route53 = {
-      zones = [
-        {
-          name = local.domain_name
-        }
-      ]
-      record = {
-        prefixes       = ["www"]
-        subdomain_name = format("%s%s", local.branch_name == "master" ? "" : "${local.branch_name}.", local.repository_name)
-      }
-    }
+    # route53 = {
+    #   zones = [
+    #     {
+    #       name = local.domain_name
+    #     }
+    #   ]
+    #   record = {
+    #     prefixes       = ["www"]
+    #     subdomain_name = format("%s%s", local.branch_name == "master" ? "" : "${local.branch_name}.", local.repository_name)
+    #   }
+    # }
 
     bucket_env = {
       name          = local.env_bucket_name
       file_key      = local.env_key
-      file_path     = "${path_relative_to_include()}/${local.env_local_path}"
+      file_path     = local.env_local_path
       force_destroy = false
       versioning    = true
     }

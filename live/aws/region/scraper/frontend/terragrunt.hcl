@@ -51,7 +51,7 @@ locals {
 
   config_vars = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
 
-  name = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}")
+  name = lower("${local.repository_name}-${local.branch_name}")
 
   pricing_name_spot      = local.microservice_vars.locals.pricing_name_spot
   pricing_name_on_demand = local.microservice_vars.locals.pricing_name_on_demand
@@ -126,8 +126,8 @@ terraform {
 }
 
 inputs = {
-  common_name = local.name
-  common_tags = merge(
+  name = local.name
+  tags = merge(
     local.convention_vars.locals.tags,
     local.account_vars.locals.tags,
     local.service_vars.locals.tags,
@@ -144,17 +144,17 @@ inputs = {
       scope = "accounts"
     }
 
-    route53 = {
-      zones = [
-        {
-          name = local.domain_name
-        }
-      ]
-      record = {
-        extensions     = ["www"]
-        subdomain_name = format("%s%s", local.branch_name == "master" ? "" : "${local.branch_name}.", local.repository_name)
-      }
-    }
+    # route53 = {
+    #   zones = [
+    #     {
+    #       name = local.domain_name
+    #     }
+    #   ]
+    #   record = {
+    #     extensions     = ["www"]
+    #     subdomain_name = format("%s%s", local.branch_name == "master" ? "" : "${local.branch_name}.", local.repository_name)
+    #   }
+    # }
 
     bucket_env = {
       name          = local.env_bucket_name

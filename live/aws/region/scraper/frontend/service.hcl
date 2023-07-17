@@ -16,7 +16,7 @@ locals {
   organization_name = "dresspeng"
   repository_name   = "${local.project_name}-${local.service_name}"
   repository = {
-    visibility = "private"
+    privacy    = "private"
     name       = "${local.repository_name}-${local.branch_name}"
     image_tag  = "latest"
     account_id = local.repositories_aws_account_id
