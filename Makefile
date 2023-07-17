@@ -31,11 +31,8 @@ fmt: ## Format all files
 	terragrunt hclfmt
 
 aws-auth:
-	aws --version
-	aws configure set aws_access_key_id ${AWS_ACCESS_KEY} --profile ${AWS_PROFILE_NAME}
-	aws configure set --profile ${AWS_PROFILE_NAME} aws_secret_access_key ${AWS_SECRET_KEY} --profile ${AWS_PROFILE_NAME}
-	aws configure set region ${AWS_REGION_NAME} --profile ${AWS_PROFILE_NAME}
-	aws configure set output 'text' --profile ${AWS_PROFILE_NAME}
+	make -f Makefile_infra aws-auth AWS_PROFILE_NAME=${AWS_PROFILE_NAME} AWS_REGION_NAME=${AWS_REGION_NAME} AWS_ACCESS_KEY=${AWS_ACCESS_KEY} AWS_SECRET_KEY=${AWS_SECRET_KEY}
+	# make -f Makefile_infra aws-auth AWS_PROFILE_NAME=${REPOSITORIES_AWS_PROFILE_NAME} AWS_REGION_NAME=${REPOSITORIES_AWS_REGION_NAME} AWS_ACCESS_KEY=${REPOSITORIES_AWS_ACCESS_KEY} AWS_SECRET_KEY=${REPOSITORIES_AWS_SECRET_KEY}
 	aws configure list
 
 clean: ## Clean the test environment
@@ -56,15 +53,6 @@ clean-local: ## Clean the local files and folders
 
 list-override-files:
 	find ./live -type f -name "*${OVERRIDE_EXTENSION}*"
-
-docker buildx create --name multiarch --platform linux/amd64,linux/arm64 \
-    --driver-opt network=host --buildkitd-flags '--allow-insecure-entitlement network.host'
-
-docker buildx inspect multiarch --bootstrap
-
-docker buildx build --push --builder multiarch --platform linux/amd64,linux/arm64 -t public.ecr.aws/m8n6w4v9/test:latest -f /home/olivier/dresspeng/scraper-frontend/Dockerfile .
-aws ecr-public describe-images --repository-name test
-docker manifest inspect aws_account_id.dkr.ecr.region.amazonaws.com/my-repository
 
 prepare-terragrunt: ## Setup the environment
 	make prepare-convention-config-file \
@@ -100,13 +88,16 @@ prepare-convention-config-file:
 	}
 	EOF
 prepare-aws-account-config-file:
-	$(call check_defined, OVERRIDE_EXTENSION, PATH_ABS_AWS, AWS_REGION_NAME, AWS_PROFILE_NAME, AWS_ACCOUNT_ID)
+	$(call check_defined, OVERRIDE_EXTENSION, PATH_ABS_AWS, AWS_REGION_NAME, AWS_PROFILE_NAME, AWS_ACCOUNT_ID, REPOSITORIES_AWS_REGION_NAME, REPOSITORIES_AWS_PROFILE_NAME, REPOSITORIES_AWS_ACCOUNT_ID)
 	cat <<-EOF > ${PATH_ABS_AWS}/account_${OVERRIDE_EXTENSION}.hcl 
 	locals {
 		domain_name 			= "${DOMAIN_NAME}"
 		account_region_name		= "${AWS_REGION_NAME}"
 		account_name			= "${AWS_PROFILE_NAME}"
 		account_id				= "${AWS_ACCOUNT_ID}"
+		repositories_aws_account_region	= "${REPOSITORIES_AWS_REGION_NAME}"
+		repositories_aws_account_name	= "${REPOSITORIES_AWS_PROFILE_NAME}"
+		repositories_aws_account_id		= "${REPOSITORIES_AWS_ACCOUNT_ID}"
 		tags = {
 			"Account" = "${AWS_PROFILE_NAME}"
 		}
@@ -188,11 +179,11 @@ prepare-scraper-backend:
 		AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
 		AWS_SECRET_KEY=${AWS_SECRET_KEY}
 prepare-scraper-backend-env:
+	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
 	$(eval MAKEFILE=$(shell find ${TERRAGRUNT_CONFIG_PATH} -type f -name "*Makefile*"))
-	$(call check_defined, OVERRIDE_EXTENSION, TERRAGRUNT_CONFIG_PATH, CLOUD_HOST, COMMON_NAME, FLICKR_PRIVATE_KEY, FLICKR_PUBLIC_KEY, UNSPLASH_PRIVATE_KEY, UNSPLASH_PUBLIC_KEY, PEXELS_PUBLIC_KEY, AWS_REGION_NAME, AWS_ACCESS_KEY, AWS_SECRET_KEY )
 	make -f ${MAKEFILE} prepare \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-		OUTPUT_FOLDER=${TERRAGRUNT_CONFIG_PATH} \
+		ENV_FOLDER_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		CLOUD_HOST=${CLOUD_HOST} \
 		COMMON_NAME=${COMMON_NAME} \
 		FLICKR_PRIVATE_KEY=${FLICKR_PRIVATE_KEY} \
@@ -202,9 +193,10 @@ prepare-scraper-backend-env:
 		PEXELS_PUBLIC_KEY=${PEXELS_PUBLIC_KEY} \
 		AWS_REGION_NAME=${AWS_REGION_NAME} \
 		AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
-		AWS_SECRET_KEY=${AWS_SECRET_KEY}
+		AWS_SECRET_KEY=${AWS_SECRET_KEY} \
+		PACKAGE_NAME=unimportant \
+		CONFIG_FOLDER_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-.ONESHELL: prepare-scraper-frontend
 prepare-scraper-frontend:
 	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend)
 	$(eval ORGANIZATION_NAME=dresspeng)
@@ -227,29 +219,10 @@ prepare-scraper-frontend:
 		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 prepare-scraper-frontend-env:
+	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
 	$(eval MAKEFILE=$(shell find ${TERRAGRUNT_CONFIG_PATH} -type f -name "*Makefile*"))
-	$(call check_defined, OVERRIDE_EXTENSION, TERRAGRUNT_CONFIG_PATH, NEXT_PUBLIC_API_URL)
 	make -f ${MAKEFILE} prepare \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-		OUTPUT_FOLDER=${TERRAGRUNT_CONFIG_PATH} \
+		ENV_FOLDER_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
 		PORT=$(shell yq eval '.port' ${TERRAGRUNT_CONFIG_PATH}/config_${OVERRIDE_EXTENSION}.yml)
-
-init:
-	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
-	terragrunt init --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl
-validate:
-	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
-	terragrunt validate --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl
-plan:
-	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
-	terragrunt plan --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -no-color -out=${OUTPUT_FILE} 2>&1
-apply:
-	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
-	terragrunt apply --terragrunt-non-interactive -auto-approve --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl
-destroy-microservice:
-	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
-	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -target module.microservice
-output-microservice:
-	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
-	terragrunt output --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -json  microservice

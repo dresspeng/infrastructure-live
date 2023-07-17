@@ -29,23 +29,23 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  cidr_ipv4             = local.service_vars.locals.cidr_ipv4
-  vpc_tier              = local.service_vars.locals.vpc_tier
-  project_name          = local.service_vars.locals.project_name
-  service_name          = local.service_vars.locals.service_name
-  git_host_name         = local.service_vars.locals.git_host_name
-  organization_name     = local.service_vars.locals.organization_name
-  repository_name       = local.service_vars.locals.repository_name
-  repository_visibility = local.service_vars.locals.repository_visibility
-  image_tag             = local.service_vars.locals.image_tag
-  use_fargate           = local.service_vars.locals.use_fargate
-  pricing_names         = local.service_vars.locals.pricing_names
-  os                    = local.service_vars.locals.os
-  os_version            = local.service_vars.locals.os_version
-  architecture          = local.service_vars.locals.architecture
-  task_min_count        = local.service_vars.locals.task_min_count
-  task_desired_count    = local.service_vars.locals.task_desired_count
-  task_max_count        = local.service_vars.locals.task_max_count
+  cidr_ipv4          = local.service_vars.locals.cidr_ipv4
+  vpc_tier           = local.service_vars.locals.vpc_tier
+  project_name       = local.service_vars.locals.project_name
+  service_name       = local.service_vars.locals.service_name
+  git_host_name      = local.service_vars.locals.git_host_name
+  organization_name  = local.service_vars.locals.organization_name
+  repository_name    = local.service_vars.locals.repository_name
+  repository         = local.service_vars.locals.repository
+  image_tag          = local.service_vars.locals.image_tag
+  pricing_names      = local.service_vars.locals.pricing_names
+  deployment_type    = local.service_vars.locals.deployment_type
+  os                 = local.service_vars.locals.os
+  os_version         = local.service_vars.locals.os_version
+  architecture       = local.service_vars.locals.architecture
+  task_min_count     = local.service_vars.locals.task_min_count
+  task_desired_count = local.service_vars.locals.task_desired_count
+  task_max_count     = local.service_vars.locals.task_max_count
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
@@ -106,15 +106,15 @@ locals {
       }
   })
 
-  task_definition = local.use_fargate ? {
+  task_definition = local.deployment_type == "fargate" ? {
     cpu                = local.microservice_vars.locals.fargate_instances[local.service_vars.locals.fargate_instance_key].cpu
     memory             = local.microservice_vars.locals.fargate_instances[local.service_vars.locals.fargate_instance_key].memory
     memory_reservation = null
-    } : {
+    } : local.deployment_type == "ec2" ? {
     cpu                = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].cpu
     memory             = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].memory_allowed - local.microservice_vars.locals.ecs_reserved_memory
     memory_reservation = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].memory_allowed - local.microservice_vars.locals.ecs_reserved_memory
-  }
+  } : null
 
   env_key         = "${local.branch_name}.env"
   env_local_path  = "${local.override_extension_name}.env"
@@ -188,24 +188,23 @@ inputs = {
       service = merge(
         local.microservice_vars.locals.ecs.service,
         {
-          use_fargate        = local.use_fargate
+          deployment_type    = local.deployment_type
           task_min_count     = local.task_min_count
           task_desired_count = local.task_desired_count
           task_max_count     = local.task_max_count
-          deployment_circuit_breaker = local.use_fargate ? null : {
+          deployment_circuit_breaker = local.deployment_type == "ec2" ? {
             enable   = true
             rollback = true
-          }
+          } : null
         }
       )
       task_definition = merge(
         local.microservice_vars.locals.ecs.task_definition,
         local.task_definition,
         {
-          env_bucket_name      = local.env_bucket_name,
-          env_file_name        = local.env_key
-          repository_name      = local.name
-          repository_image_tag = local.image_tag
+          env_bucket_name = local.env_bucket_name,
+          env_file_name   = local.env_key
+          repository      = local.repository
           tmpfs = {
             ContainerPath = "/run/npm"
             Size          = 1024
