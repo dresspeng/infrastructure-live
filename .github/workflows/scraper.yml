@@ -120,12 +120,16 @@ jobs:
       - name: Terragrunt frontend
         id: frontend
         run: |
-          NEXT_PUBLIC_API_URL=$(make -f Makefile_infra output-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend | jq '.ecs.elb.lb_dns_name')
-          if [[ -z ${NEXT_PUBLIC_API_URL} ]]; then
-            echo -e '\033[41mBACKEND_DNS_URL\033[0m' ::: ${NEXT_PUBLIC_API_URL}
-            exit 42
-          else
-            echo -e '\033[44mBACKEND_DNS_URL\033[0m' ::: ${NEXT_PUBLIC_API_URL}
+          if [[ ${{ inputs.running }} == true ]]; then
+            # TODO: only if plan microservice available otherwise download s3 bucket file state
+            NEXT_PUBLIC_API_URL=$(make -f Makefile_infra output-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend | jq '.ecs.elb.lb_dns_name')
+            if [[ -z ${NEXT_PUBLIC_API_URL} ]]; then
+              echo -e '\033[41mBACKEND_DNS_URL\033[0m' ::: ${NEXT_PUBLIC_API_URL}
+              exit 42
+            else
+              echo -e '\033[44mBACKEND_DNS_URL\033[0m' ::: ${NEXT_PUBLIC_API_URL}
+            fi
+            echo NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL >> $GITHUB_ENV
           fi
 
           make prepare-scraper-frontend \
