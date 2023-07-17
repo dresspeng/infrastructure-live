@@ -56,16 +56,17 @@ jobs:
           echo ECR_REGISTRY_URI=$ECR_REGISTRY_URI >> $GITHUB_ENV
 
       - name: Setup AWS CLI
+        env:
+          AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
+          AWS_REGION_NAME: ${{ vars.AWS_REGION_NAME }}
+          AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          REPOSITORIES_AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
+          REPOSITORIES_AWS_REGION_NAME: ${{ vars.AWS_REGION_NAME }}
+          REPOSITORIES_AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
+          REPOSITORIES_AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
         run: |
-          make aws-auth \
-          AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }} \
-          AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
-          AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
-          AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
-          REPOSITORIES_AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }} \
-          REPOSITORIES_AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
-          REPOSITORIES_AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
-          REPOSITORIES_AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+          make aws-auth          
 
       - name: Login to ${{ vars.CONTAINER_REGISTRY_PRIVACY }} ECR
         uses: docker/login-action@v2
