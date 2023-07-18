@@ -157,8 +157,8 @@ jobs:
       DNS_URL: ${{ steps.backend.outputs.DNS_URL }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      # - name: Checkout
+      #   uses: actions/checkout@v3
 
       - name: Setup SSH
         run: |
@@ -254,8 +254,8 @@ jobs:
       DNS_URL: ${{ steps.frontend.outputs.DNS_URL }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      # - name: Checkout
+      #   uses: actions/checkout@v3
 
       - name: Setup SSH
         run: |
