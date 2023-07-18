@@ -46,7 +46,8 @@ jobs:
       - name: Get ECR information
         id: get-output
         run: |
-          REPOSITORY_NAME=$(basename ${{ github.repository }})
+          # REPOSITORY_NAME=$(basename ${{ github.repository }})
+          REPOSITORY_NAME=infrastructure-modules-$BRANCH_NAME-bin
           echo "ECR_REPOSITORY_NAME=$(echo $REPOSITORY_NAME-$BRANCH_NAME | tr A-Z a-z)" >> $GITHUB_OUTPUT
 
           if [[ $ECR_PRIVACY == private ]]; then
@@ -64,15 +65,12 @@ jobs:
     runs-on: ubuntu-latest
     container: ubuntu # connect the workflow steps to the network
     environment: ${{ inputs.environment || 'repositories' }}
-    env:
-      HEALTHCHECK: /healthz
     services:
-      local-project:
-        image: ${{ needs.ecr.outputs.ECR_REGISTRY_URI }}/${{ needs.ecr.outputs.ECR_REPOSITORY_NAME}}
-        # options: --read-only
+      terragrunt:
+        image: '${{ needs.ecr.outputs.ECR_REGISTRY_URI }}/${{ needs.ecr.outputs.ECR_REPOSITORY_NAME}}'
         credentials:
           username: AWS
-          password: ${{ needs.ecr.outputs.ECR_LOGIN_PASSWORD }}
+          password: '${{ needs.ecr.outputs.ECR_LOGIN_PASSWORD }}'
         env:
           AWS_REGION_NAME: ${{ vars.AWS_REGION_NAME }}
           AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
