@@ -37,13 +37,14 @@ aws-auth:
 
 clean: ## Clean the test environment
 	make -f Makefile_infra nuke-region
-	make -f Makefile_infra nuke-ecs
-	make -f Makefile_infra nuke-vpc
-	make -f Makefile_infra nuke-global
 
 	make -f Makefile_infra clean-task-definition
 	make -f Makefile_infra clean-elb
 	make -f Makefile_infra clean-ecs
+
+	make -f Makefile_infra nuke-ecs
+	make -f Makefile_infra nuke-vpc
+	make -f Makefile_infra nuke-global
 
 	make clean-local
 clean-local: ## Clean the local files and folders
@@ -114,7 +115,7 @@ prepare-microservice-config-file:
 prepare-microservice:
 	$(call check_defined, OVERRIDE_EXTENSION, GITHUB_TOKEN, TERRAGRUNT_CONFIG_PATH, ORGANIZATION_NAME, REPOSITORY_NAME, BRANCH_NAME, DEFAULT_BRANCH_NAME)
 	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
-	$(eval branches=$(shell make gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
+	$(eval branches=$(shell make -f Makefile_infra gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
 	if [[ '$(shell echo ${branches} | grep -o "${BRANCH_NAME}" | wc -l)' == '0' ]]; then
 		$(eval BRANCH_NAME_MICROSERVICE=${DEFAULT_BRANCH_NAME})
 		echo -e '\033[43mWarning\033[0m' ::: BRANCH_NAME ${BRANCH_NAME} not found, using ${DEFAULT_BRANCH_NAME}

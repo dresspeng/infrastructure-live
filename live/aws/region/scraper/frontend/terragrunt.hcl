@@ -172,11 +172,11 @@ inputs = {
             protocol         = "http"
             protocol_version = "http"
           },
-          {
-            port             = 443
-            protocol         = "https"
-            protocol_version = "http"
-          }
+          # {
+          #   port             = 443
+          #   protocol         = "https"
+          #   protocol_version = "http"
+          # }
         ]
         target = {
           port              = local.config_vars.port
