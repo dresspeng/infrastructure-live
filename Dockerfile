@@ -7,8 +7,10 @@ FROM ${VARIANT}
 RUN apk add --no-cache curl
 
 RUN apk add --no-cache shadow sudo
-ENV USERNAME=user
-ENV USER_UID=1001
+ARG USERNAME=user
+ARG USER_UID=1001
+ENV USERNAME=$USERNAME
+ENV USER_UID=$USER_UID
 ENV USER_GID=$USER_UID
 RUN addgroup --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \

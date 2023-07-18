@@ -160,6 +160,13 @@ jobs:
       # - name: Checkout
       #   uses: actions/checkout@v3
 
+      - name: Setup workdir
+        run: |
+          pwd
+          ls -a
+          cd /home/$USERNAME
+          ls
+
       - name: Setup SSH
         run: |
           sudo apk add --no-cache sudo openssh
@@ -256,13 +263,6 @@ jobs:
     steps:
       # - name: Checkout
       #   uses: actions/checkout@v3
-    
-      - name: Setup workdir
-        run: |
-          pwd
-          ls -a
-          cd /home/$USERNAME
-          ls
 
       - name: Setup SSH
         run: |
