@@ -4,15 +4,15 @@ ARG VARIANT=$AWS_ECR_REGISTRY/$AWS_ECR_REPOSITORY
 
 FROM ${VARIANT}
 
-RUN sudo apk add --no-cache curl openssh
-
-# ssh
-RUN eval `ssh-agent -s`
-
 ARG USERNAME=user
 ARG USER_UID=1001
 ARG USER_GID=$USER_UID
 USER $USERNAME
+
+RUN sudo apk add --no-cache curl openssh
+
+# ssh
+RUN eval `ssh-agent -s`
 
 WORKDIR /home/$USERNAME
 
