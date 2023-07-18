@@ -17,7 +17,7 @@ on:
 env:
   # TERRAFORM_VERSION: 1.4.6
   # TERRAGRUNT_VERSION: 0.45.17
-  ECR_PRIVACY: private # ${{ vars.CONTAINER_REGISTRY_PRIVACY }}
+  ECR_PRIVACY: ${{ vars.CONTAINER_REGISTRY_PRIVACY }}
   IMAGE_TAG: latest
   ORGANIZATION_NAME: ${{ github.repository_owner }}
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -46,9 +46,9 @@ jobs:
       - name: Get ECR information
         id: get-output
         run: |
-          # REPOSITORY_NAME=$(basename ${{ github.repository }})
-          
-          ECR_REPOSITORY_NAME=$(echo infrastructure-modules-$BRANCH_NAME-bin | tr A-Z a-z)
+          REPOSITORY_NAME=$(basename ${{ github.repository }})
+
+          ECR_REPOSITORY_NAME=$(echo $REPOSITORY_NAME-$BRANCH_NAME | tr A-Z a-z)
           echo "ECR_REPOSITORY_NAME=$ECR_REPOSITORY_NAME" >> $GITHUB_OUTPUT
 
           if [[ $ECR_PRIVACY == private ]]; then

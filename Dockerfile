@@ -4,8 +4,7 @@ ARG VARIANT=$AWS_ECR_REGISTRY/$AWS_ECR_REPOSITORY
 
 FROM ${VARIANT}
 
-# openssh
-# RUN apk add --no-cache curl
+RUN apk add --no-cache curl openssh
 
 ARG USERNAME=user
 ARG USER_UID=1001
