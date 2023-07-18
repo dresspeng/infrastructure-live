@@ -15,9 +15,6 @@ RUN addgroup --gid $USER_GID $USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 USER $USERNAME
 
-# ssh
-RUN eval `ssh-agent -s`
-
 WORKDIR /home/$USERNAME
 
 COPY --chown=$USERNAME:$USER_GID . .

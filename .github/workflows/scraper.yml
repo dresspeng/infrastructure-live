@@ -73,6 +73,7 @@ jobs:
           username: AWS
           password: ${{ needs.ecr.outputs.ECR_LOGIN_PASSWORD }}
         env:
+          GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
           AWS_REGION_NAME: ${{ vars.AWS_REGION_NAME }}
           AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
           AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
@@ -88,14 +89,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Setup SSH
+        run: |
+          eval `ssh-agent -s`
+          mkdir -p ~/.ssh
+          SSH_FOLDER=$(cd ~/.ssh; pwd)
+          echo ${SSH_FOLDER}
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/action
+          echo "${{ vars.SSH_PUBLIC_KEY }}" > ~/.ssh/action.pub
+          sudo chmod -R 600 ${SSH_FOLDER}/action
+          ssh-add ~/.ssh/action
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          cat ~/.ssh/known_hosts
 
       - name: Setup AWS CLI
         id: setup
         run: |
           make aws-auth
+
+      - name: Setup Github CLI
+        run: |
+          make gh-auth-check
 
 
 # jobs:
