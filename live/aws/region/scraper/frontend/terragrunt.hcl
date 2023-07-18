@@ -37,7 +37,6 @@ locals {
   organization_name  = local.service_vars.locals.organization_name
   repository_name    = local.service_vars.locals.repository_name
   repository         = local.service_vars.locals.repository
-  image_tag          = local.service_vars.locals.image_tag
   pricing_names      = local.service_vars.locals.pricing_names
   deployment_type    = local.service_vars.locals.deployment_type
   os                 = local.service_vars.locals.os
@@ -46,6 +45,7 @@ locals {
   task_min_count     = local.service_vars.locals.task_min_count
   task_desired_count = local.service_vars.locals.task_desired_count
   task_max_count     = local.service_vars.locals.task_max_count
+  iam                = local.service_vars.locals.iam
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
@@ -117,7 +117,7 @@ locals {
   } : null
 
   env_key         = "${local.branch_name}.env"
-  env_local_path  = "${local.override_extension_name}.env"
+  env_local_path  = "${get_terragrunt_dir()}/${local.override_extension_name}.env"
   env_bucket_name = "${local.name}-env"
 }
 
@@ -140,9 +140,7 @@ inputs = {
       tier      = local.vpc_tier
     }
 
-    iam = {
-      scope = "accounts"
-    }
+    iam = local.iam
 
     # route53 = {
     #   zones = [
@@ -159,7 +157,7 @@ inputs = {
     bucket_env = {
       name          = local.env_bucket_name
       file_key      = local.env_key
-      file_path     = "${path_relative_to_include()}/${local.env_local_path}"
+      file_path     = local.env_local_path
       force_destroy = false
       versioning    = true
     }

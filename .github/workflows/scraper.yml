@@ -15,15 +15,13 @@ on:
         default: true
 
 env:
-  # TERRAFORM_VERSION: 1.4.6
-  # TERRAGRUNT_VERSION: 0.45.17
   ECR_PRIVACY: ${{ vars.CONTAINER_REGISTRY_PRIVACY }}
   IMAGE_TAG: latest
   ORGANIZATION_NAME: ${{ github.repository_owner }}
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
-  ecr:
+  setup:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'repositories' }}
     env:
@@ -58,89 +56,15 @@ jobs:
             echo "ECR_REGISTRY_URI=$ECR_REGISTRY_PUBLIC_URI" >> $GITHUB_OUTPUT  
           fi
 
-
-# jobs:
-#   scraper:
-#     runs-on: ubuntu-latest
-#     environment: ${{ inputs.environment || 'repositories' }}
-#     env:
-#       DOCKER_IMAGE_NAME: this-image
-#       ECR_PRIVACY: private  # fetch from each repo vars
-#       ECR_REGISTRY_PRIVATE_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION_NAME }}.amazonaws.com
-#       ECR_REGISTRY_PUBLIC_URI: public.ecr.aws
-#     steps:
-#       - name: Checkout
-#         uses: actions/checkout@v3
-
-#       - name: Setup privacy env
-#         run: |
-#           if [[ $ECR_PRIVACY == private ]]; then
-#             AWS_CLI_SERVICE=ecr
-#             ECR_REGISTRY_URI=$ECR_REGISTRY_PRIVATE_URI
-#           elif [[ $ECR_PRIVACY == public ]]; then
-#             AWS_CLI_SERVICE=ecr-public
-#             ECR_REGISTRY_URI=$ECR_REGISTRY_PUBLIC_URI
-#           fi
-
-#           echo AWS_CLI_SERVICE=$AWS_CLI_SERVICE
-#           echo AWS_CLI_SERVICE=$AWS_CLI_SERVICE >> $GITHUB_ENV
-
-#           echo ECR_REGISTRY_URI=$ECR_REGISTRY_URI
-#           echo ECR_REGISTRY_URI=$ECR_REGISTRY_URI >> $GITHUB_ENV
-
-#       - name: Setup AWS CLI        
-#         run: |
-#           # make aws-auth \
-#           #   AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }} \
-#           #   AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
-#           #   AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
-#           #   AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
-#           #   REPOSITORIES_AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }} \
-#           #   REPOSITORIES_AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
-#           #   REPOSITORIES_AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
-#           #   REPOSITORIES_AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
-
-#           aws --version
-#           aws configure set aws_access_key_id ${{ vars.AWS_ACCESS_KEY }}
-#           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_KEY }}
-#           aws configure set region ${{ vars.AWS_REGION_NAME }}
-#           aws configure list
-
-#       - name: Login to ${{ vars.CONTAINER_REGISTRY_PRIVACY }} ECR
-#         uses: docker/login-action@v2
-#         with:
-#           registry: ${{ env.ECR_REGISTRY_URI }}
-
-#       - uses: webfactory/ssh-agent@v0.8.0
-#         with:
-#           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-#       - name: Setup Terraform v${{ env.TERRAFORM_VERSION }}
-#         uses: hashicorp/setup-Terraform@v2
-#         with:
-#           terraform_version: ${{ env.TERRAFORM_VERSION }}
-#           terraform_wrapper: false
-
-#       - name: Setup Terraform version
-#         run: terraform --version
-
-#       - name: Setup Terraform wrapper path
-#         run: which terraform
-#       - name: Setup Terragrunt v${{ env.TERRAGRUNT_VERSION }}
-#         run: |
-#           sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.TERRAGRUNT_VERSION }}/terragrunt_linux_amd64"
-#           sudo chmod +x /bin/terragrunt
-#           terragrunt -v
-
   backend:
-    needs: [ecr]
+    needs: [setup]
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'repositories' }}
     container: 
-      image: '${{ needs.ecr.outputs.ECR_REGISTRY_URI }}/${{ needs.ecr.outputs.ECR_REPOSITORY_NAME}}'
+      image: '${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}'
       credentials:
         username: AWS
-        password: ${{ needs.ecr.outputs.ECR_LOGIN_PASSWORD }}
+        password: ${{ needs.setup.outputs.ECR_LOGIN_PASSWORD }}
     env:
       GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
       AWS_REGION_NAME: ${{ vars.AWS_REGION_NAME }}
@@ -230,14 +154,14 @@ jobs:
           fi
 
   frontend:
-    needs: [ecr, backend]
+    needs: [setup, backend]
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'repositories' }}
     container: 
-      image: '${{ needs.ecr.outputs.ECR_REGISTRY_URI }}/${{ needs.ecr.outputs.ECR_REPOSITORY_NAME}}'
+      image: '${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}'
       credentials:
         username: AWS
-        password: ${{ needs.ecr.outputs.ECR_LOGIN_PASSWORD }}
+        password: ${{ needs.setup.outputs.ECR_LOGIN_PASSWORD }}
     env:
       GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
       AWS_REGION_NAME: ${{ vars.AWS_REGION_NAME }}

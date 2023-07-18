@@ -45,6 +45,7 @@ locals {
   task_min_count     = local.service_vars.locals.task_min_count
   task_desired_count = local.service_vars.locals.task_desired_count
   task_max_count     = local.service_vars.locals.task_max_count
+  iam                = local.service_vars.locals.iam
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
@@ -132,7 +133,6 @@ terraform {
   }
 
   source = "${local.modules_git_prefix}//module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
-
 }
 
 inputs = {
@@ -150,9 +150,7 @@ inputs = {
       tier      = local.vpc_tier
     }
 
-    iam = {
-      scope = "accounts"
-    }
+    iam = local.iam
 
     # route53 = {
     #   zones = [
