@@ -4,7 +4,7 @@ ARG VARIANT=$AWS_ECR_REGISTRY/$AWS_ECR_REPOSITORY
 
 FROM ${VARIANT}
 
-RUN apk add --no-cache curl openssh
+RUN sudo apk add --no-cache curl openssh
 
 # ssh
 RUN eval `ssh-agent -s`
