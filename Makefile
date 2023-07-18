@@ -41,6 +41,7 @@ clean: ## Clean the test environment
 	make -f Makefile_infra clean-task-definition
 	make -f Makefile_infra clean-elb
 	make -f Makefile_infra clean-ecs
+	make -f Makefile_infra clean-cloudwatch
 
 	make -f Makefile_infra nuke-ecs
 	make -f Makefile_infra nuke-vpc

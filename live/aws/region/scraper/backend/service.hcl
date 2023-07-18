@@ -22,15 +22,15 @@ locals {
     account_id = local.repositories_aws_account_id
     region     = local.repositories_aws_account_region
   }
-  pricing_names      = ["on-demand"]
+  pricing_names      = ["on-demand", "spot"]
   os                 = "linux"
   os_version         = "2023"
   architecture       = "x64"
   deployment_type    = "ec2"
   ec2_instance_key   = "t3_small"
   task_min_count     = 0
-  task_desired_count = 1
-  task_max_count     = 1
+  task_desired_count = 2
+  task_max_count     = 2
   iam = {
     scope = "accounts"
   }
