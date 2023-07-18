@@ -4,7 +4,7 @@ ARG VARIANT=$AWS_ECR_REGISTRY/$AWS_ECR_REPOSITORY
 
 FROM ${VARIANT}
 
-RUN apk add --no-cache shadow sudo
+RUN apk add --no-cache shadow sudoopenssh
 ARG USERNAME=user
 ARG USER_UID=1001
 ARG USER_GID=$USER_UID
@@ -14,8 +14,6 @@ RUN addgroup --gid $USER_GID $USERNAME \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 USER $USERNAME
-
-RUN sudo apk add --no-cache openssh
 
 # ssh
 RUN eval `ssh-agent -s`
