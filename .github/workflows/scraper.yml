@@ -63,7 +63,7 @@ jobs:
     needs: [ecr]
     runs-on: ubuntu-latest
     container: ubuntu # connect the workflow steps to the network
-    environment: repositories
+    environment: ${{ inputs.environment || 'repositories' }}
     env:
       HEALTHCHECK: /healthz
     services:
