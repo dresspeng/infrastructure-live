@@ -127,6 +127,13 @@ jobs:
           else            
             make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
+            echo test1
+            terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json microservice
+            echo test2
+            terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json microservice | jq '.ecs.elb.lb_dns_name'
+            echo test3
+            terragrunt output --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -json microservice | jq '.ecs.elb.lb_dns_name'
+
             BACKEND_DNS_URL=$(make -f Makefile_infra output-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
             if [[ -z ${BACKEND_DNS_URL} ]]; then
               echo -e '\033[41mBACKEND_DNS_URL\033[0m' ::: ${BACKEND_DNS_URL}
