@@ -47,8 +47,9 @@ jobs:
         id: get-output
         run: |
           # REPOSITORY_NAME=$(basename ${{ github.repository }})
-          REPOSITORY_NAME=infrastructure-modules-$BRANCH_NAME-bin
-          echo "ECR_REPOSITORY_NAME=$(echo $REPOSITORY_NAME-$BRANCH_NAME | tr A-Z a-z)" >> $GITHUB_OUTPUT
+          
+          ECR_REPOSITORY_NAME=$(echo infrastructure-modules-$BRANCH_NAME-bin | tr A-Z a-z)
+          echo "ECR_REPOSITORY_NAME=$ECR_REPOSITORY_NAME" >> $GITHUB_OUTPUT
 
           if [[ $ECR_PRIVACY == private ]]; then
             echo "ECR_LOGIN_PASSWORD=$(aws ecr get-login-password --region ${{ vars.AWS_REGION_NAME }})" >> $GITHUB_OUTPUT
@@ -70,7 +71,7 @@ jobs:
         image: '${{ needs.ecr.outputs.ECR_REGISTRY_URI }}/${{ needs.ecr.outputs.ECR_REPOSITORY_NAME}}'
         credentials:
           username: AWS
-          password: '${{ needs.ecr.outputs.ECR_LOGIN_PASSWORD }}'
+          password: ${{ needs.ecr.outputs.ECR_LOGIN_PASSWORD }}
         env:
           AWS_REGION_NAME: ${{ vars.AWS_REGION_NAME }}
           AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
