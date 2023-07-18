@@ -49,12 +49,20 @@ jobs:
 
       - name: Setup AWS CLI        
         run: |
-          # make aws-auth
-          aws --version
-          aws configure set aws_access_key_id ${{ vars.AWS_ACCESS_KEY }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_KEY }}
-          aws configure set region ${{ vars.AWS_REGION_NAME }}
-          aws configure list
+          make aws-auth \
+            AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
+            AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
+            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
+            REPOSITORIES_AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }} \
+            REPOSITORIES_AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
+            REPOSITORIES_AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
+            REPOSITORIES_AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+
+          # aws --version
+          # aws configure set aws_access_key_id ${{ vars.AWS_ACCESS_KEY }}
+          # aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_KEY }}
+          # aws configure set region ${{ vars.AWS_REGION_NAME }}
+          # aws configure list
 
       - name: Login to ${{ vars.CONTAINER_REGISTRY_PRIVACY }} ECR
         uses: docker/login-action@v2
@@ -97,9 +105,11 @@ jobs:
       - name: Terragrunt backend
         id: backend
         run: |
+          TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+
           make prepare-scraper-backend \
             GITHUB_TOKEN=${{ secrets.GH_TERRA_TOKEN}} \
-            TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend \
+            TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}  \
             FLICKR_PRIVATE_KEY=${{ secrets.FLICKR_PRIVATE_KEY }} \
             FLICKR_PUBLIC_KEY=${{ secrets.FLICKR_PUBLIC_KEY }} \
@@ -109,14 +119,22 @@ jobs:
             AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
             AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
             AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
-          make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+
+          make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
           if [[ ${{ inputs.running }} == false ]]; then
-            make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+            make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
           else            
-            make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
+            make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-            BACKEND_DNS_URL=$(make -f Makefile_infra output-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend | jq '.ecs.elb.lb_dns_name')
+            echo test1
+            terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json microservice
+            echo test2
+            terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json microservice | jq '.ecs.elb.lb_dns_name'
+            echo test3
+            terragrunt output --terragrunt-non-interactive --terragrunt-config ${TERRAGRUNT_CONFIG_PATH}/terragrunt.hcl -json microservice | jq '.ecs.elb.lb_dns_name'
+
+            BACKEND_DNS_URL=$(make -f Makefile_infra output-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
             if [[ -z ${BACKEND_DNS_URL} ]]; then
               echo -e '\033[41mBACKEND_DNS_URL\033[0m' ::: ${BACKEND_DNS_URL}
               exit 42
@@ -129,17 +147,29 @@ jobs:
       - name: Terragrunt frontend
         id: frontend
         run: |
+          export TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+
           make prepare-scraper-frontend \
             GITHUB_TOKEN=${{ secrets.GH_TERRA_TOKEN}} \
-            TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend \
+            TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}  \
             NEXT_PUBLIC_API_URL=${BACKEND_DNS_URL}
-          make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+
+          make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
           if [[ ${{ inputs.running }} == false ]]; then
-            make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+            make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
           else
-            make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
+            make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
+
+            FRONTEND_DNS_URL=$(make -f Makefile_infra output-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
+            if [[ -z ${FRONTEND_DNS_URL} ]]; then
+              echo -e '\033[41mFRONTEND_DNS_URL\033[0m' ::: ${FRONTEND_DNS_URL}
+              exit 42
+            else
+              echo -e '\033[44mFRONTEND_DNS_URL\033[0m' ::: ${FRONTEND_DNS_URL}
+            fi
+            echo FRONTEND_DNS_URL=$FRONTEND_DNS_URL >> $GITHUB_ENV
           fi
 
       # # run container like backend and frontend with dynamic port
