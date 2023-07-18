@@ -6,6 +6,9 @@ FROM ${VARIANT}
 
 RUN apk add --no-cache curl openssh
 
+# ssh
+RUN eval `ssh-agent -s`
+
 ARG USERNAME=user
 ARG USER_UID=1001
 ARG USER_GID=$USER_UID
