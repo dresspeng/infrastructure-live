@@ -19,8 +19,8 @@ env:
   # TERRAGRUNT_VERSION: 0.45.17
   ECR_PRIVACY: ${{ vars.CONTAINER_REGISTRY_PRIVACY }}
   IMAGE_TAG: latest
-  ORG: ${{ github.repository_owner }}
-  BRANCH: ${{ github.head_ref || github.ref_name }}
+  ORGANIZATION_NAME: ${{ github.repository_owner }}
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
   ecr:
@@ -46,8 +46,8 @@ jobs:
       - name: Get ECR information
         id: get-output
         run: |
-          REPO=$(basename ${{ github.repository }})
-          echo "ECR_REPOSITORY_NAME=$(echo $REPO-$BRANCH | tr A-Z a-z)" >> $GITHUB_OUTPUT
+          REPOSITORY_NAME=$(basename ${{ github.repository }})
+          echo "ECR_REPOSITORY_NAME=$(echo $REPOSITORY_NAME-$BRANCH_NAME | tr A-Z a-z)" >> $GITHUB_OUTPUT
 
           if [[ $ECR_PRIVACY == private ]]; then
             echo "ECR_LOGIN_PASSWORD=$(aws ecr get-login-password --region $AWS_REGION_NAME)" >> $GITHUB_OUTPUT
