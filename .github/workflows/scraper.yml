@@ -24,7 +24,6 @@ env:
 
 jobs:
   ecr:
-    name: setup ECR
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'repositories' }}
     env:

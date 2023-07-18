@@ -4,6 +4,8 @@ ARG VARIANT=$AWS_ECR_REGISTRY/$AWS_ECR_REPOSITORY
 
 FROM ${VARIANT}
 
+RUN apk add --no-cache curl
+
 RUN apk add --no-cache shadow sudo
 ARG USERNAME=user
 ARG USER_UID=1001
