@@ -69,6 +69,7 @@ jobs:
     services:
       terragrunt:
         image: '${{ needs.ecr.outputs.ECR_REGISTRY_URI }}/${{ needs.ecr.outputs.ECR_REPOSITORY_NAME}}'
+        options: --user 1001:1001 
         credentials:
           username: AWS
           password: ${{ needs.ecr.outputs.ECR_LOGIN_PASSWORD }}
@@ -91,6 +92,7 @@ jobs:
 
       - name: Setup SSH
         run: |
+          apk add --no-cache sudo openssh
           eval `ssh-agent -s`
           mkdir -p ~/.ssh
           SSH_FOLDER=$(cd ~/.ssh; pwd)
