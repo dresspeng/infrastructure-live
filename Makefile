@@ -60,15 +60,28 @@ prepare-terragrunt: ## Setup the environment
 	make prepare-convention-config-file \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
 	make prepare-aws-account-config-file \
+		PATH_ACCOUNT=${PATH_ABS_AWS}
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		DOMAIN_NAME=${DOMAIN_NAME} \
+		DOMAIN_SUFFIX=${DOMAIN_SUFFIX} \
 		AWS_REGION_NAME=${AWS_REGION_NAME} \
 		AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
 		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
 		REPOSITORIES_AWS_REGION_NAME=${REPOSITORIES_AWS_REGION_NAME} \
-		REPOSITORIES_AWS_PROFILE_NAME=${REPOSITORIES_AWS_PROFILE_NAME} \
+		REPOSITORIES_AWS_ACCOUNT_ID=${REPOSITORIES_AWS_ACCOUNT_ID}
+	make prepare-aws-account-config-file \
+		PATH_ACCOUNT=live/_global
+		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+		DOMAIN_NAME=${DOMAIN_NAME} \
+		DOMAIN_SUFFIX=${DOMAIN_SUFFIX} \
+		AWS_REGION_NAME=${AWS_REGION_NAME} \
+		AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
+		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
+		REPOSITORIES_AWS_REGION_NAME=${REPOSITORIES_AWS_REGION_NAME} \
 		REPOSITORIES_AWS_ACCOUNT_ID=${REPOSITORIES_AWS_ACCOUNT_ID}
 prepare-convention-config-file:
+	$(eval ORGANIZATION_NAME=dresspeng)
+
 	$(eval MODULES_GIT_HOST_AUTH_METHOD=https)
 	$(eval MODULES_GIT_HOST=github.com)
 	$(eval MODULES_ORGANIZATION_NAME=dresspeng)
@@ -81,6 +94,7 @@ prepare-convention-config-file:
 	cat <<-EOF > ${PATH_ABS_LIVE}/convention_${OVERRIDE_EXTENSION}.hcl 
 	locals {
 		override_extension_name			= "${OVERRIDE_EXTENSION}"
+		organization_name				= "${ORGANIZATION_NAME}"
 		modules_git_host_auth_method 	= "${MODULES_GIT_HOST_AUTH_METHOD}"
 		modules_git_host_name			= "${MODULES_GIT_HOST}"
 		modules_organization_name		= "${MODULES_ORGANIZATION_NAME}"
@@ -93,15 +107,15 @@ prepare-convention-config-file:
 	}
 	EOF
 prepare-aws-account-config-file:
-	$(call check_defined, OVERRIDE_EXTENSION, PATH_ABS_AWS, AWS_REGION_NAME, AWS_PROFILE_NAME, AWS_ACCOUNT_ID, REPOSITORIES_AWS_REGION_NAME, REPOSITORIES_AWS_PROFILE_NAME, REPOSITORIES_AWS_ACCOUNT_ID)
-	cat <<-EOF > ${PATH_ABS_AWS}/account_${OVERRIDE_EXTENSION}.hcl 
+	$(call check_defined, OVERRIDE_EXTENSION, PATH_ACCOUNT, AWS_REGION_NAME, AWS_PROFILE_NAME, AWS_ACCOUNT_ID, REPOSITORIES_AWS_REGION_NAME,  REPOSITORIES_AWS_ACCOUNT_ID)
+	cat <<-EOF > ${PATH_ACCOUNT}/account_${OVERRIDE_EXTENSION}.hcl 
 	locals {
 		domain_name 			= "${DOMAIN_NAME}"
+		domain_suffix 			= "${DOMAIN_SUFFIX}"
 		account_region_name		= "${AWS_REGION_NAME}"
 		account_name			= "${AWS_PROFILE_NAME}"
 		account_id				= "${AWS_ACCOUNT_ID}"
 		repositories_aws_account_region	= "${REPOSITORIES_AWS_REGION_NAME}"
-		repositories_aws_account_name	= "${REPOSITORIES_AWS_PROFILE_NAME}"
 		repositories_aws_account_id		= "${REPOSITORIES_AWS_ACCOUNT_ID}"
 		tags = {
 			"Account" = "${AWS_PROFILE_NAME}"

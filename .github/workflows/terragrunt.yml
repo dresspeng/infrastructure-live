@@ -27,6 +27,7 @@ jobs:
     environment: ${{ inputs.environment }}
     env:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
       AWS_REGION_NAME: ${{ vars.AWS_REGION_NAME }}
       AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
