@@ -5,14 +5,12 @@ on:
     inputs:
       environment-machine:
         type: environment
-        description: "The environment to deploy to"
+        description: "The deployment environment"
         required: true
-        default: vistimi-scraper-live
-      environment-repository:
-        type: environment
-        description: "The environment to deploy to"
-        required: true
-        default: vistimi-scraper-repositories
+      # environment-repository:
+      #   type: environment
+      #   description: "The docker environment"
+      #   required: true
       running:
         type: boolean
         description: "Up and running"
@@ -28,7 +26,7 @@ env:
 jobs:
   repository:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment-repository }}
+    environment: ${{ inputs.environment-machine }}
     outputs:
       REPOSITORIES_AWS_REGION_NAME: ${{ steps.get-output.outputs.REPOSITORIES_AWS_REGION_NAME }}
       REPOSITORIES_AWS_ACCOUNT_ID: ${{ steps.get-output.outputs.REPOSITORIES_AWS_ACCOUNT_ID }}
