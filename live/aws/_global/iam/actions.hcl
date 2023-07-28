@@ -46,4 +46,12 @@ locals {
   acm_write                 = local.acm_vars.locals.write
   acm_permission_management = local.acm_vars.locals.permission_management
   acm_tagging               = local.acm_vars.locals.tagging
+
+  # Dynamodb
+  dynamodb_vars                  = read_terragrunt_config("${get_terragrunt_dir()}/actions/dynamodb.hcl")
+  dynamodb_read                  = local.dynamodb_vars.locals.read
+  dynamodb_list                  = local.dynamodb_vars.locals.list
+  dynamodb_write                 = local.dynamodb_vars.locals.write
+  dynamodb_permission_management = local.dynamodb_vars.locals.permission_management
+  dynamodb_tagging               = local.dynamodb_vars.locals.tagging
 }

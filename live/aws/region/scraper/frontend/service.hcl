@@ -3,7 +3,6 @@ locals {
   service_tmp_vars = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
 
   repositories_aws_account_region = local.account_vars.locals.repositories_aws_account_region
-  repositories_aws_account_name   = local.account_vars.locals.repositories_aws_account_name
   repositories_aws_account_id     = local.account_vars.locals.repositories_aws_account_id
 
   branch_name = local.service_tmp_vars.locals.branch_name

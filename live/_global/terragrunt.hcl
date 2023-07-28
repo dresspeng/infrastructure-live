@@ -63,8 +63,8 @@ remote_state {
     encrypt             = true
     key                 = "${path_relative_to_include()}/terraform.tfstate"
     region              = local.account_region_name
-    bucket              = lower("${local.organization_name}-tf-state")
-    dynamodb_table      = lower("${local.organization_name}-tf-locks")
+    bucket              = lower(join("-", compact([local.organization_name, "tf-state"])))
+    dynamodb_table      = lower(join("-", compact([local.organization_name, "tf-locks"])))
     s3_bucket_tags      = local.tags
     dynamodb_table_tags = local.tags
   }

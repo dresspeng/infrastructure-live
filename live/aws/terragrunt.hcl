@@ -21,6 +21,10 @@ locals {
     local.account_vars.locals.tags,
     local.service_vars.locals.tags,
   )
+
+  user_name_elements = split("-", local.account_name)
+  user_name          = element(local.user_name_elements, length(local.user_name_elements) - 1)
+  group_name         = element(local.user_name_elements, length(local.user_name_elements) - 2)
 }
 
 # Generate version block
@@ -68,8 +72,8 @@ remote_state {
     encrypt             = true
     key                 = "${path_relative_to_include()}/terraform.tfstate"
     region              = local.account_region_name
-    bucket              = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}-tf-state")
-    dynamodb_table      = lower("${local.organization_name}-${local.repository_name}-${local.branch_name}-tf-locks")
+    bucket              = lower(join("-", compact([local.organization_name, local.repository_name, local.branch_name, local.user_name, local.group_name, "tf-state"])))
+    dynamodb_table      = lower(join("-", compact([local.organization_name, local.repository_name, local.branch_name, local.user_name, local.group_name, "tf-locks"])))
     s3_bucket_tags      = local.tags
     dynamodb_table_tags = local.tags
   }

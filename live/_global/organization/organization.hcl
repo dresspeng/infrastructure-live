@@ -5,12 +5,12 @@ locals {
   action_vars = read_terragrunt_config("${get_repo_root()}/live/aws/_global/iam/actions.hcl")
 
   level_statements = [
-    # {
-    #   sid       = "General"
-    #   actions   = ["ecs:*", "ec2:*", "logs:*", "s3:*", "dynamodb:*", "secretsmanager:*", "route53:*", "route53domains:ListDomains"]
-    #   effect    = "Allow"
-    #   resources = ["*"]
-    # },
+    {
+      sid       = "Scraper"
+      actions   = ["ecs:*", "ec2:*", "autoscaling:*", "application-autoscaling:*", "logs:*", "ssm:*", "iam:*", "kms:*", "elasticloadbalancing:*"] # "iam:CreatePolicy", "kms:DescribeKey", "elasticloadbalancing:CreateLoadBalancer", "application-autoscaling:RegisterScalableTarget"
+      effect    = "Allow"
+      resources = ["*"]
+    },
     {
       sid       = "IamUser"
       actions   = ["iam:ListMFADevices", "iam:CreateVirtualMFADevice", "iam:DeactivateMFADevice", "iam:ListAccessKeys"]
@@ -36,8 +36,20 @@ locals {
       resources = ["*"]
     },
     {
-      sid       = "ACM"
-      actions   = flatten([for perm in ["read", "list", "write", "permission_management", "tagging"] : local.action_vars.locals["acm_${perm}"]])
+      sid       = "AcmFull"
+      actions   = ["acm:*"]
+      effect    = "Allow"
+      resources = ["*"]
+    },
+    {
+      sid       = "S3Full"
+      actions   = ["s3:*"]
+      effect    = "Allow"
+      resources = ["*"]
+    },
+    {
+      sid       = "DynamodbFull"
+      actions   = ["dynamodb:*"]
       effect    = "Allow"
       resources = ["*"]
     },
@@ -106,6 +118,7 @@ locals {
     tags          = {}
   }
 
+  # TODO: create an org team
   github = {
     repositories = [
       { owner = "dresspeng", name = "infrastructure-modules" },

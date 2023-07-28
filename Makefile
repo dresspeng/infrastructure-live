@@ -32,7 +32,6 @@ fmt: ## Format all files
 
 aws-auth:
 	make -f Makefile_infra aws-auth USE_DEFAULT=true AWS_REGION_NAME=${AWS_REGION_NAME} AWS_ACCESS_KEY=${AWS_ACCESS_KEY} AWS_SECRET_KEY=${AWS_SECRET_KEY}
-	make -f Makefile_infra aws-auth USE_DEFAULT=false AWS_PROFILE_NAME=${REPOSITORIES_AWS_PROFILE_NAME} AWS_REGION_NAME=${REPOSITORIES_AWS_REGION_NAME} AWS_ACCESS_KEY=${REPOSITORIES_AWS_ACCESS_KEY} AWS_SECRET_KEY=${REPOSITORIES_AWS_SECRET_KEY}
 	aws configure list
 
 clean: ## Clean the test environment
@@ -67,8 +66,8 @@ prepare-terragrunt: ## Setup the environment
 		AWS_REGION_NAME=${AWS_REGION_NAME} \
 		AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
 		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
-		REPOSITORIES_AWS_REGION_NAME=${REPOSITORIES_AWS_REGION_NAME} \
-		REPOSITORIES_AWS_ACCOUNT_ID=${REPOSITORIES_AWS_ACCOUNT_ID}
+		REPOSITORIES_AWS_REGION_NAME=${AWS_REGION_NAME} \
+		REPOSITORIES_AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
 	make prepare-aws-account-config-file \
 		PATH_ACCOUNT=live/_global
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
@@ -77,8 +76,8 @@ prepare-terragrunt: ## Setup the environment
 		AWS_REGION_NAME=${AWS_REGION_NAME} \
 		AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
 		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
-		REPOSITORIES_AWS_REGION_NAME=${REPOSITORIES_AWS_REGION_NAME} \
-		REPOSITORIES_AWS_ACCOUNT_ID=${REPOSITORIES_AWS_ACCOUNT_ID}
+		REPOSITORIES_AWS_REGION_NAME=${AWS_REGION_NAME} \
+		REPOSITORIES_AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
 prepare-convention-config-file:
 	$(eval ORGANIZATION_NAME=dresspeng)
 
@@ -107,7 +106,7 @@ prepare-convention-config-file:
 	}
 	EOF
 prepare-aws-account-config-file:
-	$(call check_defined, OVERRIDE_EXTENSION, PATH_ACCOUNT, AWS_REGION_NAME, AWS_PROFILE_NAME, AWS_ACCOUNT_ID, REPOSITORIES_AWS_REGION_NAME,  REPOSITORIES_AWS_ACCOUNT_ID)
+	$(call check_defined, OVERRIDE_EXTENSION, PATH_ACCOUNT, AWS_REGION_NAME, AWS_PROFILE_NAME, AWS_ACCOUNT_ID)
 	cat <<-EOF > ${PATH_ACCOUNT}/account_${OVERRIDE_EXTENSION}.hcl 
 	locals {
 		domain_name 			= "${DOMAIN_NAME}"
@@ -115,8 +114,8 @@ prepare-aws-account-config-file:
 		account_region_name		= "${AWS_REGION_NAME}"
 		account_name			= "${AWS_PROFILE_NAME}"
 		account_id				= "${AWS_ACCOUNT_ID}"
-		repositories_aws_account_region	= "${REPOSITORIES_AWS_REGION_NAME}"
-		repositories_aws_account_id		= "${REPOSITORIES_AWS_ACCOUNT_ID}"
+		repositories_aws_account_region	= "${AWS_REGION_NAME}"
+		repositories_aws_account_id		= "${AWS_ACCOUNT_ID}"
 		tags = {
 			"Account" = "${AWS_PROFILE_NAME}"
 		}
