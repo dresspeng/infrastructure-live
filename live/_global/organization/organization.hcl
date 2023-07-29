@@ -2,7 +2,19 @@
 # plan before changes
 
 locals {
-  action_vars = read_terragrunt_config("${get_repo_root()}/live/aws/_global/iam/actions.hcl")
+  action_vars  = read_terragrunt_config("${get_repo_root()}/live/aws/_global/iam/actions.hcl")
+  account_vars = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
+
+  domain_name         = local.account_vars.locals.domain_name
+  domain_suffix       = local.account_vars.locals.domain_suffix
+  account_region_name = local.account_vars.locals.account_region_name
+  account_name        = local.account_vars.locals.account_name
+  account_id          = local.account_vars.locals.account_id
+
+  backend_prefix = "dresspeng"
+  projects = {
+    scraper = ["scraper-backend", "scraper-frotnend"]
+  }
 
   level_statements = [
     {
@@ -31,25 +43,13 @@ locals {
     },
     {
       sid       = "Route53RecordsFull"
-      actions   = ["route53:ChangeResourceRecordSets", "route53:ListResourceRecordSets", "route53:GetHostedZone", "route53:GetHostedZoneCount", "route53:ListHostedZones", "route53:ListHostedZonesByName", "route53:ListHostedZonesByVPC"]
+      actions   = ["route53:ChangeResourceRecordSets", "route53:ListResourceRecordSets", "route53:GetHostedZone", "route53:GetHostedZoneCount", "route53:ListHostedZones", "route53:ListHostedZonesByName", "route53:ListHostedZonesByVPC", "route53:ListTagsForResource"]
       effect    = "Allow"
       resources = ["*"]
     },
     {
       sid       = "AcmFull"
       actions   = ["acm:*"]
-      effect    = "Allow"
-      resources = ["*"]
-    },
-    {
-      sid       = "S3Full"
-      actions   = ["s3:*"]
-      effect    = "Allow"
-      resources = ["*"]
-    },
-    {
-      sid       = "DynamodbFull"
-      actions   = ["dynamodb:*"]
       effect    = "Allow"
       resources = ["*"]
     },
@@ -62,34 +62,76 @@ locals {
 
     groups = {
       dev = {
-        force_destroy         = true
-        create_admin_role     = false
-        create_poweruser_role = true
-        create_readonly_role  = false
-        attach_role_name      = "poweruser"
-        pw_length             = 20
+        force_destroy = true
+        pw_length     = 20
         users = [{
           name = "olivier"
+          statements = [
+            {
+              sid       = "S3Backend"
+              actions   = ["s3:*"]
+              effect    = "Allow"
+              resources = [for repository_name in local.projects.scraper : "arn:aws:s3:::${local.backend_prefix}-${repository_name}-olivier-*"]
+            },
+            {
+              sid       = "DynamodbBackend"
+              actions   = ["dynamodb:*"]
+              effect    = "Allow"
+              resources = [for repository_name in local.projects.scraper : "arn:aws:dynamodb:${local.account_region_name}:${local.account_id}:table/${local.backend_prefix}-${repository_name}-olivier-*"]
+            },
+            {
+              sid       = "S3Scraper"
+              actions   = ["s3:*"]
+              effect    = "Allow"
+              resources = [for repository_name in local.projects.scraper : "arn:aws:s3:::${repository_name}-olivier-*"]
+
+            },
+            {
+              sid       = "DynamodbScraper"
+              actions   = ["dynamodb:*"]
+              effect    = "Allow"
+              resources = [for repository_name in local.projects.scraper : "arn:aws:dynamodb:${local.account_region_name}:${local.account_id}:table/${repository_name}-olivier-*"]
+            },
+          ]
         }]
       }
       machine = {
-        force_destroy         = true
-        create_admin_role     = false
-        create_poweruser_role = true
-        create_readonly_role  = false
-        attach_role_name      = "poweruser"
-        pw_length             = 20
+        force_destroy = true
+        pw_length     = 20
         users = [{
           name = "live"
+          statements = [
+            {
+              sid       = "S3Backend"
+              actions   = ["s3:*"]
+              effect    = "Allow"
+              resources = [for repository_name in local.projects.scraper : "arn:aws:s3:::${local.backend_prefix}-${repository_name}-live-*"]
+            },
+            {
+              sid       = "DynamodbBackend"
+              actions   = ["dynamodb:*"]
+              effect    = "Allow"
+              resources = [for repository_name in local.projects.scraper : "arn:aws:dynamodb:${local.account_region_name}:${local.account_id}:table/${local.backend_prefix}-${repository_name}-live-*"]
+            },
+            {
+              sid       = "S3Scraper"
+              actions   = ["s3:*"]
+              effect    = "Allow"
+              resources = [for repository_name in local.projects.scraper : "arn:aws:s3:::${repository_name}-live-*"]
+
+            },
+            {
+              sid       = "DynamodbScraper"
+              actions   = ["dynamodb:*"]
+              effect    = "Allow"
+              resources = [for repository_name in local.projects.scraper : "arn:aws:dynamodb:${local.account_region_name}:${local.account_id}:table/${repository_name}-live-*"]
+            },
+          ]
         }]
       }
       base = {
-        force_destroy         = true
-        create_admin_role     = false
-        create_poweruser_role = false
-        create_readonly_role  = true
-        attach_role_name      = "readonly"
-        pw_length             = 20
+        force_destroy = true
+        pw_length     = 20
         users = [
           {
             name = "docker"

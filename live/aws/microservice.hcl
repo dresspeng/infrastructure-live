@@ -1,7 +1,6 @@
 locals {
   # const
   ecs_reserved_memory = 100
-  use_bridge          = true
 
   # purchasing options
   pricing_name_spot      = "spot"
@@ -14,14 +13,14 @@ locals {
       cpu            = 2048
       memory         = 2048
       memory_allowed = 1801 # TODO: double check under infra of cluster + ECSReservedMemory
-      architecture   = "x64"
+      architecture   = "x86_64"
     }
     t3_medium = {
       name           = "t3.medium"
       cpu            = 2048
       memory         = 4096
       memory_allowed = 3828 # TODO: double check under infra of cluster + ECSReservedMemory
-      architecture   = "x64"
+      architecture   = "x86_64"
     }
   }
 
@@ -62,8 +61,7 @@ locals {
       user_data         = <<EOT
           #!/bin/bash
           cat <<'EOF' >> /etc/ecs/ecs.config
-              ECS_LOGLEVEL=debug
-              ${local.use_bridge ? "ECS_ENABLE_TASK_IAM_ROLE=true" : "ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST=true"}
+              ECS_ENABLE_TASK_IAM_ROLE=true
               ECS_RESERVED_MEMORY=${local.ecs_reserved_memory}
               ECS_ENABLE_SPOT_INSTANCE_DRAINING=true
           EOF
@@ -77,8 +75,7 @@ locals {
       user_data         = <<EOT
           #!/bin/bash
           cat <<'EOF' >> /etc/ecs/ecs.config
-              ECS_LOGLEVEL=debug
-              ${local.use_bridge ? "ECS_ENABLE_TASK_IAM_ROLE=true" : "ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST=true"}
+              ECS_ENABLE_TASK_IAM_ROLE=true
               ECS_RESERVED_MEMORY=${local.ecs_reserved_memory}
           EOF
         EOT
@@ -109,7 +106,7 @@ locals {
   ecs = {
     log = {
       retention_days = 30
-      prefix         = "aws/ecs"
+      prefix         = "ecs"
     }
     task_definition = {}
     service = {

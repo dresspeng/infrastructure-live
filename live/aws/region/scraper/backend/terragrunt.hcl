@@ -33,7 +33,6 @@ locals {
   git_host_name      = local.service_vars.locals.git_host_name
   organization_name  = local.service_vars.locals.organization_name
   repository_name    = local.service_vars.locals.repository_name
-  repository         = local.service_vars.locals.repository
   pricing_names      = local.service_vars.locals.pricing_names
   deployment_type    = local.service_vars.locals.deployment_type
   os                 = local.service_vars.locals.os
@@ -43,12 +42,13 @@ locals {
   task_desired_count = local.service_vars.locals.task_desired_count
   task_max_count     = local.service_vars.locals.task_max_count
   iam                = local.service_vars.locals.iam
+  repository         = local.service_vars.locals.repository
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
   config_vars = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
 
-  name = lower("${local.repository_name}-${local.branch_name}")
+  name = lower(join("-", [local.repository_name, local.account_name, local.branch_name]))
 
   pricing_name_spot      = local.microservice_vars.locals.pricing_name_spot
   pricing_name_on_demand = local.microservice_vars.locals.pricing_name_on_demand
