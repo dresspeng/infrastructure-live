@@ -56,29 +56,15 @@ locals {
     maximum_scaling_step_size   = 1
     minimum_scaling_step_size   = 1
   }
+  # ECS_CLUSTER
   ec2 = {
     "${local.pricing_name_spot}" = {
-      user_data         = <<EOT
-          #!/bin/bash
-          cat <<'EOF' >> /etc/ecs/ecs.config
-              ECS_ENABLE_TASK_IAM_ROLE=true
-              ECS_RESERVED_MEMORY=${local.ecs_reserved_memory}
-              ECS_ENABLE_SPOT_INSTANCE_DRAINING=true
-          EOF
-        EOT
       key_name          = null
       use_spot          = true
       asg               = local.ec2_asg
       capacity_provider = local.ec2_capacity_provider
     }
     "${local.pricing_name_on_demand}" = {
-      user_data         = <<EOT
-          #!/bin/bash
-          cat <<'EOF' >> /etc/ecs/ecs.config
-              ECS_ENABLE_TASK_IAM_ROLE=true
-              ECS_RESERVED_MEMORY=${local.ecs_reserved_memory}
-          EOF
-        EOT
       key_name          = null
       use_spot          = false
       asg               = local.ec2_asg

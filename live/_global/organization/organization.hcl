@@ -13,13 +13,13 @@ locals {
 
   backend_prefix = "dresspeng"
   projects = {
-    scraper = ["scraper-backend", "scraper-frotnend"]
+    scraper = ["scraper-backend", "scraper-frontnend"]
   }
 
   level_statements = [
     {
       sid       = "Scraper"
-      actions   = ["ecs:*", "ec2:*", "autoscaling:*", "application-autoscaling:*", "logs:*", "ssm:*", "iam:*", "kms:*", "elasticloadbalancing:*"] # "iam:CreatePolicy", "kms:DescribeKey", "elasticloadbalancing:CreateLoadBalancer", "application-autoscaling:RegisterScalableTarget"
+      actions   = ["ecs:*", "ec2:*", "autoscaling:*", "autoscaling-plans:*", "application-autoscaling:*", "logs:*", "ssm:*", "iam:*", "kms:*", "elasticloadbalancing:*"] # "iam:CreatePolicy", "kms:DescribeKey", "elasticloadbalancing:CreateLoadBalancer", "application-autoscaling:RegisterScalableTarget"
       effect    = "Allow"
       resources = ["*"]
     },
@@ -50,6 +50,12 @@ locals {
     {
       sid       = "AcmFull"
       actions   = ["acm:*"]
+      effect    = "Allow"
+      resources = ["*"]
+    },
+    {
+      sid       = "S3Read"
+      actions   = ["s3:DescribeJob", "s3:Get*", "s3:List*"]
       effect    = "Allow"
       resources = ["*"]
     },
@@ -160,7 +166,6 @@ locals {
     tags          = {}
   }
 
-  # TODO: create an org team
   github = {
     repositories = [
       { owner = "dresspeng", name = "infrastructure-modules" },

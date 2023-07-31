@@ -52,25 +52,7 @@ locals {
 
   pricing_name_spot      = local.microservice_vars.locals.pricing_name_spot
   pricing_name_on_demand = local.microservice_vars.locals.pricing_name_on_demand
-  ec2_user_data = {
-    "${local.pricing_name_spot}" = {
-      user_data = <<EOT
-            #!/bin/bash
-            cat <<'EOF' >> /etc/ecs/ecs.config
-                ECS_CLUSTER=${local.name}
-            EOF
-        EOT
-    }
-    "${local.pricing_name_on_demand}" = {
-      user_data = <<EOT
-            #!/bin/bash
-            cat <<'EOF' >> /etc/ecs/ecs.config
-                ECS_CLUSTER=${local.name}
-            EOF
-        EOT
-    }
-  }
-  ec2_microservice = local.microservice_vars.locals.ec2
+  ec2_microservice       = local.microservice_vars.locals.ec2
   ec2 = { for pricing_name in local.pricing_names :
     pricing_name => merge(
       local.ec2_microservice[pricing_name],
@@ -80,7 +62,6 @@ locals {
         architecture = local.service_vars.locals.architecture
       },
       {
-        user_data     = format("%s\n%s", local.ec2_microservice[pricing_name].user_data, local.ec2_user_data[pricing_name].user_data)
         instance_type = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].name
       }
     )
@@ -173,20 +154,15 @@ inputs = {
       traffic = {
         listeners = [
           {
-            port             = 80
-            protocol         = "http"
-            protocol_version = "http"
+            protocol = "http"
           },
           # {
-          #   port             = 443
           #   protocol         = "https"
-          #   protocol_version = "http"
           # }
         ]
         target = {
           port              = local.config_vars.port
           protocol          = "http"
-          protocol_version  = "http"
           health_check_path = local.config_vars.healthCheckPath
         }
       }

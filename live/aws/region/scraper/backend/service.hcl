@@ -16,14 +16,15 @@ locals {
   os_version        = "2023"
   architecture      = "x86_64"
   deployment_type   = "ec2"
-  ec2_instance_key  = "t3_small"
+  ec2_instance_key  = "t3_medium"
   # deployment_type      = "fargate"
   # fargate_instance_key = "cpu1024_mib2048"
   task_min_count     = 0
   task_desired_count = 2
   task_max_count     = 2
   iam = {
-    scope = "microservices"
+    scope        = "microservices"
+    requires_mfa = false
   }
   repository = {
     privacy   = "private"

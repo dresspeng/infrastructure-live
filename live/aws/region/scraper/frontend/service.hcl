@@ -21,7 +21,8 @@ locals {
   task_desired_count = 1
   task_max_count     = 1
   iam = {
-    scope = "accounts"
+    scope        = "microservices"
+    requires_mfa = false
   }
   repository = {
     privacy   = "private"
