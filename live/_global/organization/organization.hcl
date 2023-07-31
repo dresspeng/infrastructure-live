@@ -175,7 +175,7 @@ locals {
     ]
     docker_action = {
       key   = "ECR_ENV_NAME"
-      value = join("-", concat([for level in local.levels : level.value], ["base", "docker"]))
+      value = "docker"
     }
     store_environment = true
   }

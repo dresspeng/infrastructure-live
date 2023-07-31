@@ -24,18 +24,18 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
-  repository:
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.environment-machine }}
-    outputs:
-      REPOSITORIES_AWS_REGION_NAME: ${{ steps.get-output.outputs.REPOSITORIES_AWS_REGION_NAME }}
-      REPOSITORIES_AWS_ACCOUNT_ID: ${{ steps.get-output.outputs.REPOSITORIES_AWS_ACCOUNT_ID }}
-    steps:
-      - name: Get env
-        id: get-output
-        run: |
-          echo "REPOSITORIES_AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }}" >> $GITHUB_OUTPUT
-          echo "REPOSITORIES_AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+  # repository:
+  #   runs-on: ubuntu-latest
+  #   environment: ${{ inputs.environment-machine }}
+  #   outputs:
+  #     REPOSITORIES_AWS_REGION_NAME: ${{ steps.get-output.outputs.REPOSITORIES_AWS_REGION_NAME }}
+  #     REPOSITORIES_AWS_ACCOUNT_ID: ${{ steps.get-output.outputs.REPOSITORIES_AWS_ACCOUNT_ID }}
+  #   steps:
+  #     - name: Get env
+  #       id: get-output
+  #       run: |
+  #         echo "REPOSITORIES_AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }}" >> $GITHUB_OUTPUT
+  #         echo "REPOSITORIES_AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
 
   setup:
     runs-on: ubuntu-latest
@@ -126,9 +126,9 @@ jobs:
             DOMAIN_SUFFIX=${{ vars.DOMAIN_SUFFIX }}  \
             AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
             AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }}  \
-            AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }} \
-            REPOSITORIES_AWS_REGION_NAME=${{ needs.repository.outputs.REPOSITORIES_AWS_REGION_NAME }} \
-            REPOSITORIES_AWS_ACCOUNT_ID=${{ needs.repository.outputs.REPOSITORIES_AWS_ACCOUNT_ID}}
+            AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
+# REPOSITORIES_AWS_REGION_NAME=${{ needs.repository.outputs.REPOSITORIES_AWS_REGION_NAME }} \
+# REPOSITORIES_AWS_ACCOUNT_ID=${{ needs.repository.outputs.REPOSITORIES_AWS_ACCOUNT_ID}}
 
       - name: Terragrunt backend
         id: backend
@@ -218,9 +218,9 @@ jobs:
             DOMAIN_SUFFIX=${{ vars.DOMAIN_SUFFIX }}  \
             AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
             AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }}  \
-            AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }} \
-            REPOSITORIES_AWS_REGION_NAME=${{ needs.repository.outputs.REPOSITORIES_AWS_REGION_NAME }} \
-            REPOSITORIES_AWS_ACCOUNT_ID=${{ needs.repository.outputs.REPOSITORIES_AWS_ACCOUNT_ID}}
+            AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
+# REPOSITORIES_AWS_REGION_NAME=${{ needs.repository.outputs.REPOSITORIES_AWS_REGION_NAME }} \
+# REPOSITORIES_AWS_ACCOUNT_ID=${{ needs.repository.outputs.REPOSITORIES_AWS_ACCOUNT_ID}}
 
       - name: Terragrunt frontend
         id: frontend

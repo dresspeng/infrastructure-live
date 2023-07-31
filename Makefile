@@ -65,9 +65,7 @@ prepare-terragrunt: ## Setup the environment
 		DOMAIN_SUFFIX=${DOMAIN_SUFFIX} \
 		AWS_REGION_NAME=${AWS_REGION_NAME} \
 		AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
-		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
-		REPOSITORIES_AWS_REGION_NAME=${AWS_REGION_NAME} \
-		REPOSITORIES_AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
+		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
 	make prepare-aws-account-config-file \
 		PATH_ACCOUNT=live/_global
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
@@ -75,9 +73,7 @@ prepare-terragrunt: ## Setup the environment
 		DOMAIN_SUFFIX=${DOMAIN_SUFFIX} \
 		AWS_REGION_NAME=${AWS_REGION_NAME} \
 		AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
-		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
-		REPOSITORIES_AWS_REGION_NAME=${AWS_REGION_NAME} \
-		REPOSITORIES_AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
+		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
 prepare-convention-config-file:
 	$(eval ORGANIZATION_NAME=dresspeng)
 
@@ -114,8 +110,6 @@ prepare-aws-account-config-file:
 		account_region_name		= "${AWS_REGION_NAME}"
 		account_name			= "${AWS_PROFILE_NAME}"
 		account_id				= "${AWS_ACCOUNT_ID}"
-		repositories_aws_account_region	= "${AWS_REGION_NAME}"
-		repositories_aws_account_id		= "${AWS_ACCOUNT_ID}"
 		tags = {
 			"Account" = "${AWS_PROFILE_NAME}"
 		}
