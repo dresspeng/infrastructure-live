@@ -33,7 +33,6 @@ locals {
   git_host_name      = local.service_vars.locals.git_host_name
   organization_name  = local.service_vars.locals.organization_name
   repository_name    = local.service_vars.locals.repository_name
-  repository         = local.service_vars.locals.repository
   pricing_names      = local.service_vars.locals.pricing_names
   deployment_type    = local.service_vars.locals.deployment_type
   os                 = local.service_vars.locals.os
@@ -43,34 +42,17 @@ locals {
   task_desired_count = local.service_vars.locals.task_desired_count
   task_max_count     = local.service_vars.locals.task_max_count
   iam                = local.service_vars.locals.iam
+  repository         = local.service_vars.locals.repository
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
   config_vars = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
 
-  name = lower("${local.repository_name}-${local.branch_name}")
+  name = lower(join("-", [local.repository_name, local.account_name, local.branch_name]))
 
   pricing_name_spot      = local.microservice_vars.locals.pricing_name_spot
   pricing_name_on_demand = local.microservice_vars.locals.pricing_name_on_demand
-  ec2_user_data = {
-    "${local.pricing_name_spot}" = {
-      user_data = <<EOT
-            #!/bin/bash
-            cat <<'EOF' >> /etc/ecs/ecs.config
-                ECS_CLUSTER=${local.name}
-            EOF
-        EOT
-    }
-    "${local.pricing_name_on_demand}" = {
-      user_data = <<EOT
-            #!/bin/bash
-            cat <<'EOF' >> /etc/ecs/ecs.config
-                ECS_CLUSTER=${local.name}
-            EOF
-        EOT
-    }
-  }
-  ec2_microservice = local.microservice_vars.locals.ec2
+  ec2_microservice       = local.microservice_vars.locals.ec2
   ec2 = { for pricing_name in local.pricing_names :
     pricing_name => merge(
       local.ec2_microservice[pricing_name],
@@ -80,7 +62,6 @@ locals {
         architecture = local.service_vars.locals.architecture
       },
       {
-        user_data     = format("%s\n%s", local.ec2_microservice[pricing_name].user_data, local.ec2_user_data[pricing_name].user_data)
         instance_type = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].name
       }
     )
@@ -173,20 +154,15 @@ inputs = {
       traffic = {
         listeners = [
           {
-            port             = 80
-            protocol         = "http"
-            protocol_version = "http"
+            protocol = "http"
           },
           # {
-          #   port             = 443
           #   protocol         = "https"
-          #   protocol_version = "http"
           # }
         ]
         target = {
           port              = local.config_vars.port
           protocol          = "http"
-          protocol_version  = "http"
           health_check_path = local.config_vars.healthCheckPath
         }
       }

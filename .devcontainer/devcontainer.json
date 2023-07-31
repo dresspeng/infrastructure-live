@@ -2,7 +2,7 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/ubuntu
 {
 	"name": "Alpine",
-	"image": "496882976578.dkr.ecr.us-west-1.amazonaws.com/infrastructure-modules-trunk-devcontainer",
+	"image": "401582117818.dkr.ecr.us-west-1.amazonaws.com/infrastructure-modules-trunk-devcontainer",
 	"runArgs": [
 		"--env-file",
 		".devcontainer/devcontainer.env"
@@ -10,7 +10,7 @@
 	"mounts": [
 		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
 	],
-	"initializeCommand": "export $(grep -v '^#' .devcontainer/devcontainer.env | xargs) && make aws-auth && aws ecr get-login-password --region $REPOSITORIES_AWS_REGION_NAME | docker login --username AWS --password-stdin $REPOSITORIES_AWS_ACCOUNT_ID.dkr.ecr.$REPOSITORIES_AWS_REGION_NAME.amazonaws.com",
+	"initializeCommand": "export $(grep -v '^#' .devcontainer/devcontainer.env | xargs) && make aws-auth && aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 401582117818.dkr.ecr.us-west-1.amazonaws.com",
 	"postStartCommand": "export $(grep -v '^#' .devcontainer/devcontainer.env | xargs) && make aws-auth && tflint --init",
 	"features": {},
 	"customizations": {

@@ -2,9 +2,6 @@ locals {
   account_vars     = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
   service_tmp_vars = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
 
-  repositories_aws_account_region = local.account_vars.locals.repositories_aws_account_region
-  repositories_aws_account_id     = local.account_vars.locals.repositories_aws_account_id
-
   branch_name = local.service_tmp_vars.locals.branch_name
 
   cidr_ipv4         = "1.0.0.0/16"
@@ -14,26 +11,25 @@ locals {
   git_host_name     = "github.com"
   organization_name = "dresspeng"
   repository_name   = "${local.project_name}-${local.service_name}"
-  repository = {
-    privacy    = "private"
-    name       = "${local.repository_name}-${local.branch_name}-${local.branch_name}"
-    image_tag  = "latest"
-    account_id = local.repositories_aws_account_id
-    region     = local.repositories_aws_account_region
-  }
-  pricing_names      = ["on-demand", "spot"]
-  os                 = "linux"
-  os_version         = "2023"
-  architecture       = "x64"
-  deployment_type    = "ec2"
-  ec2_instance_key   = "t3_small"
+  pricing_names     = ["on-demand", "spot"]
+  os                = "linux"
+  os_version        = "2023"
+  architecture      = "x86_64"
+  deployment_type   = "ec2"
+  ec2_instance_key  = "t3_medium"
+  # deployment_type      = "fargate"
+  # fargate_instance_key = "cpu1024_mib2048"
   task_min_count     = 0
-  task_desired_count = 3
-  task_max_count     = 3
+  task_desired_count = 2
+  task_max_count     = 2
   iam = {
-    scope = "accounts"
-    # "scope":        "microservices",
-    # 	"requires_mfa": false,
+    scope        = "microservices"
+    requires_mfa = false
+  }
+  repository = {
+    privacy   = "private"
+    name      = "${local.repository_name}-${local.branch_name}"
+    image_tag = "latest"
   }
 
   tags = {
