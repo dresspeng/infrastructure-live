@@ -26,8 +26,7 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  cidr_ipv4          = local.service_vars.locals.cidr_ipv4
-  vpc_tier           = local.service_vars.locals.vpc_tier
+  vpc                = local.service_vars.locals.vpc
   project_name       = local.service_vars.locals.project_name
   service_name       = local.service_vars.locals.service_name
   git_host_name      = local.service_vars.locals.git_host_name
@@ -112,11 +111,7 @@ inputs = {
   )
 
   microservice = {
-    vpc = {
-      name      = local.name
-      cidr_ipv4 = local.cidr_ipv4
-      tier      = local.vpc_tier
-    }
+    vpc = local.vpc
 
     iam = local.iam
 
