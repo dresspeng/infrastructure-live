@@ -120,9 +120,9 @@ inputs = {
     local.service_vars.locals.tags,
   )
 
-  microservice = {
-    vpc = local.vpc
+  vpc = local.vpc
 
+  microservice = { 
     iam = local.iam
 
     route53 = {
