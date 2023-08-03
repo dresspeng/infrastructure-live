@@ -13,13 +13,21 @@ locals {
 
   backend_prefix = "dresspeng"
   projects = {
-    scraper = ["scraper-backend", "scraper-frontnend"]
+    scraper = ["scraper-backend", "scraper-frontend"]
   }
 
   level_statements = [
     {
-      sid       = "Scraper"
-      actions   = ["ecs:*", "ec2:*", "autoscaling:*", "autoscaling-plans:*", "application-autoscaling:*", "logs:*", "ssm:*", "iam:*", "kms:*", "elasticloadbalancing:*"] # "iam:CreatePolicy", "kms:DescribeKey", "elasticloadbalancing:CreateLoadBalancer", "application-autoscaling:RegisterScalableTarget"
+      sid     = "Scraper"
+      actions = ["ecs:*", "ec2:*", "autoscaling:*", "autoscaling-plans:*", "application-autoscaling:*", "logs:*", "cloudwatch:*", "ssm:*", "iam:*", "kms:*", "elasticloadbalancing:*"] # "iam:CreatePolicy", "kms:DescribeKey", "elasticloadbalancing:CreateLoadBalancer", "application-autoscaling:RegisterScalableTarget"
+      # "cloudwatch:PutMetricStream",
+      # "logs:CreateLogDelivery",
+      # "logs:CreateLogStream",
+      # "cloudwatch:PutMetricData",
+      # "logs:UpdateLogDelivery",
+      # "logs:CreateLogGroup",
+      # "logs:PutLogEvents",
+      # "cloudwatch:ListMetrics"
       effect    = "Allow"
       resources = ["*"]
     },

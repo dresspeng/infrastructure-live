@@ -120,17 +120,17 @@ inputs = {
 
     iam = local.iam
 
-    # route53 = {
-    #   zones = [
-    #     {
-    #       name = "${local.domain_name}.${local.domain_suffix}"
-    #     }
-    #   ]
-    #   record = {
-    #     extensions     = ["www"]
-    #     subdomain_name = format("%s%s", local.branch_name == "master" ? "" : "${local.branch_name}.", local.repository_name)
-    #   }
-    # }
+    route53 = {
+      zones = [
+        {
+          name = "${local.domain_name}.${local.domain_suffix}"
+        }
+      ]
+      record = {
+        extensions     = ["www"]
+        subdomain_name = format("%s%s", local.branch_name == "trunk" ? "" : "${local.branch_name}.", local.repository_name)
+      }
+    }
 
     bucket_env = {
       name          = local.env_bucket_name
@@ -146,9 +146,9 @@ inputs = {
           {
             protocol = "http"
           },
-          # {
-          #   protocol         = "https"
-          # }
+          {
+            protocol = "https"
+          }
         ]
         target = {
           port              = local.config_vars.port
