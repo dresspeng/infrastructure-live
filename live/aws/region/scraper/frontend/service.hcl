@@ -4,8 +4,10 @@ locals {
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
-  cidr_ipv4          = "2.0.0.0/16"
-  vpc_tier           = "public"
+  vpc = {
+    id   = "vpc-0d5c1d5379f616e2f"
+    tier = "public"
+  }
   project_name       = "scraper"
   service_name       = "frontend"
   git_host_name      = "github.com"

@@ -146,9 +146,9 @@ inputs = {
           {
             protocol = "http"
           },
-          {
-            protocol = "https"
-          }
+          # {
+          #   protocol = "https"
+          # }
         ]
         target = {
           port              = local.config_vars.port
