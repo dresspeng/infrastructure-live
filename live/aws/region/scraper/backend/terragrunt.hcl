@@ -47,7 +47,7 @@ locals {
 
   config_vars = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
 
-  name = lower(join("-", [local.repository_name, local.account_name, local.branch_name]))
+  name = lower(join("-", [local.account_name, local.branch_name]))
 
   pricing_name_spot      = local.microservice_vars.locals.pricing_name_spot
   pricing_name_on_demand = local.microservice_vars.locals.pricing_name_on_demand
@@ -113,7 +113,7 @@ terraform {
 }
 
 inputs = {
-  name = local.name
+  name_suffix = local.name
   tags = merge(
     local.convention_tmp_vars.locals.tags,
     local.account_vars.locals.tags,
@@ -146,21 +146,19 @@ inputs = {
     }
 
     ecs = merge(local.microservice_vars.locals.ecs, {
-      traffic = {
-        listeners = [
-          {
-            protocol = "http"
+      traffics = [
+        for traffic in local.service_vars.locals.ecs.traffics : {
+          listener = {
+            port     = try(traffic.listener.port, null)
+            protocol = traffic.listener.protocol
           },
-          # {
-          #   protocol = "https"
-          # }
-        ]
-        target = {
-          port              = local.config_vars.port
-          protocol          = "http"
-          health_check_path = local.config_vars.healthCheckPath
+          target = {
+            port              = try(traffic.listener.port, local.config_vars.port)
+            protocol          = traffic.target.protocol
+            health_check_path = local.config_vars.healthCheckPath
+          }
         }
-      }
+      ]
       service = merge(
         local.microservice_vars.locals.ecs.service,
         {
@@ -177,11 +175,7 @@ inputs = {
       task_definition = merge(
         local.microservice_vars.locals.ecs.task_definition,
         local.task_definition,
-        {
-          env_bucket_name = local.env_bucket_name,
-          env_file_name   = local.env_key
-          repository      = local.repository
-        }
+        local.service_vars.locals.ecs.task_definition,
       )
       ec2     = local.ec2
       fargate = local.fargate

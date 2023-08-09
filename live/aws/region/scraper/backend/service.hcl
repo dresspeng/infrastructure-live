@@ -12,7 +12,7 @@ locals {
   service_name      = "backend"
   git_host_name     = "github.com"
   organization_name = "dresspeng"
-  repository_name   = "${local.project_name}-${local.service_name}"
+  repository_name   = join("-", [local.project_name, local.service_name])
   pricing_names     = ["on-demand", "spot"]
   os                = "linux"
   os_version        = "2023"
@@ -28,11 +28,34 @@ locals {
     scope        = "accounts"
     requires_mfa = false
   }
-  repository = {
-    privacy   = "private"
-    name      = "${local.repository_name}-${local.branch_name}"
-    image_tag = "latest"
+  ecs = {
+    traffics = [
+      {
+        listener = {
+          protocol = "http"
+        },
+        target = {
+          protocol = "http"
+        }
+      }
+    ]
+    task_definition = {
+      docker = {
+        registry = {
+          ecr = {
+            privacy = "private"
+          }
+        }
+        repository = {
+          name = join("-", [local.repository_name, local.branch_name])
+        }
+        image = {
+          tag = "latest"
+        }
+      }
+    }
   }
+
 
   tags = {
     "Git Microservice" = "${local.git_host_name}/${local.organization_name}/${local.repository_name}@${local.branch_name}"
