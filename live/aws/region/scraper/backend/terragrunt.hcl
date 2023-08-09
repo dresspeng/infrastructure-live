@@ -188,7 +188,7 @@ inputs = {
   }]
 
   bucket_picture = {
-    name          = "${local.name}-${local.config_vars.buckets.picture.name}"
+    name          = local.config_vars.buckets.picture.name
     force_destroy = false
     versioning    = true
   }
