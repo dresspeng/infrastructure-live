@@ -55,6 +55,13 @@ locals {
     }
   }
 
+  bucket_env = {
+    name          = "env"
+    file_key      = "${local.branch_name}.env"
+    force_destroy = false
+    versioning    = true
+  }
+
   tags = {
     "Git Microservice" = "${local.git_host_name}/${local.organization_name}/${local.repository_name}@${local.branch_name}"
     "Project"          = local.project_name

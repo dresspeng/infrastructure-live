@@ -92,10 +92,7 @@ locals {
     memory_reservation = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].memory_allowed - local.microservice_vars.locals.ecs_reserved_memory
   } : null
 
-  env_key         = "${local.branch_name}.env"
-  env_local_path  = "${get_terragrunt_dir()}/${local.override_extension_name}.env"
-  env_bucket_name = "${local.name}-env"
-
+  env_local_path = "${get_terragrunt_dir()}/${local.override_extension_name}.env"
 }
 
 terraform {
@@ -136,13 +133,12 @@ inputs = {
       }
     }
 
-    bucket_env = {
-      name          = local.env_bucket_name
-      file_key      = local.env_key
-      file_path     = local.env_local_path
-      force_destroy = false
-      versioning    = true
-    }
+    bucket_env = merge(
+      local.service_vars.locals.bucket_env,
+      {
+        file_path = local.env_local_path
+      }
+    )
 
     ecs = merge(local.microservice_vars.locals.ecs, {
       traffics = [
