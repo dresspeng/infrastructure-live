@@ -41,7 +41,6 @@ locals {
   task_desired_count = local.service_vars.locals.task_desired_count
   task_max_count     = local.service_vars.locals.task_max_count
   iam                = local.service_vars.locals.iam
-  repository         = local.service_vars.locals.repository
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
