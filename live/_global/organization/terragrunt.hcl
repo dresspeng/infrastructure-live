@@ -30,7 +30,7 @@ locals {
 }
 
 terraform {
-  source = "${local.modules_git_prefix}//module/_global/level?ref=${local.modules_branch_name}"
+  source = "${local.modules_git_prefix}//projects/module/_global/level?ref=${local.modules_branch_name}"
 }
 
 inputs = {

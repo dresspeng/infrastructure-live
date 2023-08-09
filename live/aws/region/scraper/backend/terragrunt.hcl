@@ -109,7 +109,7 @@ terraform {
     ]
   }
 
-  source = "${local.modules_git_prefix}//module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
+  source = "${local.modules_git_prefix}//projects/module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
 }
 
 inputs = {
@@ -122,7 +122,7 @@ inputs = {
 
   vpc = local.vpc
 
-  microservice = { 
+  microservice = {
     iam = local.iam
 
     route53 = {

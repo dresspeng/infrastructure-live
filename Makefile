@@ -82,7 +82,7 @@ prepare-convention-config-file:
 	$(eval MODULES_ORGANIZATION_NAME=dresspeng)
 	$(eval MODULES_PROJECT_NAME=infrastructure)
 	$(eval MODULES_SERVICE_NAME=modules)
-	$(eval MODULES_REPOSITORY_VISIBILITY=public)
+	$(eval MODULES_REPOSITORY_VISIBILITY=private)
 	$(eval MODULES_BRANCH_NAME=trunk)
 
 	$(call check_defined, OVERRIDE_EXTENSION, PATH_ABS_LIVE)

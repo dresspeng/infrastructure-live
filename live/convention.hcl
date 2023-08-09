@@ -9,7 +9,7 @@ locals {
 
   modules_git_prefix = format("%s%s",
     local.modules_git_host_auth_method == "ssh" ? "git::git@${local.modules_git_host_name}:" : (
-      local.modules_git_host_auth_method == "https" ? "git::https://${local.modules_repository_visibility == "private" ? "oauth2:${get_env("GITHUB_TOKEN")}" : ""}@${local.modules_git_host_name}/" : null
+      local.modules_git_host_auth_method == "https" ? "git::https://${local.modules_repository_visibility == "private" ? "oauth2:${get_env("GITHUB_TOKEN")}@" : ""}${local.modules_git_host_name}/" : null
     ),
     "${local.modules_organization_name}/${local.modules_repository_name}.git"
   )
