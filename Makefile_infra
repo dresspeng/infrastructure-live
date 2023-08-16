@@ -4,6 +4,9 @@
 # use bash not sh
 SHELL:= /bin/bash
 
+PATH_ABS_ROOT=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+FILE_NAME = $(shell basename $(MAKEFILE_LIST))
+
 GIT_SHA=$(shell git rev-parse HEAD) # latest commit hash
 GIT_DIFF=$(shell git diff -s --exit-code || echo "-dirty") # If working copy has changes, append `-dirty` to hash
 GIT_REV=$(GIT_SHA)$(GIT_DIFF)
@@ -124,7 +127,7 @@ gh-load-folder:
 		-H "X-GitHub-Api-Version: 2022-11-28" \
 		https://api.github.com/repos/${ORGANIZATION_NAME}/${REPOSITORY_NAME}/contents/${REPOSITORY_CONFIG_PATH_FOLDER}?ref=${BRANCH_NAME} | jq -c '.[].path'))
 	for filePath in ${filesPath}; do
-		make -f Makefile_infra gh-load-file \
+		make -f ${PATH_ABS_ROOT}/${FILE_NAME} gh-load-file \
 			REPOSITORY_CONFIG_PATH_FILE=$$filePath \
 			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
