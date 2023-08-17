@@ -4,12 +4,9 @@
 # use bash not sh
 SHELL:= /bin/bash
 
-# absolute path
 PATH_ABS_ROOT=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-PATH_REL_LIVE=live
-PATH_ABS_LIVE=${PATH_ABS_ROOT}/${PATH_REL_LIVE}
-PATH_REL_AWS=live/aws
-PATH_ABS_AWS=${PATH_ABS_ROOT}/${PATH_REL_AWS}
+FILE_NAME=$(shell basename $(MAKEFILE_LIST))
+INFRA_FILE_NAME=Makefile_infra
 
 OVERRIDE_EXTENSION=override
 
@@ -31,22 +28,22 @@ fmt: ## Format all files
 	terragrunt hclfmt
 
 aws-auth:
-	make -f Makefile_infra aws-auth USE_DEFAULT=true AWS_REGION_NAME=${AWS_REGION_NAME} AWS_ACCESS_KEY=${AWS_ACCESS_KEY} AWS_SECRET_KEY=${AWS_SECRET_KEY}
+	make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} aws-auth USE_DEFAULT=true AWS_REGION_NAME=${AWS_REGION_NAME} AWS_ACCESS_KEY=${AWS_ACCESS_KEY} AWS_SECRET_KEY=${AWS_SECRET_KEY}
 	aws configure list
 
 clean: ## Clean the test environment
-	make -f Makefile_infra nuke-region
+	make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} nuke-region
 
-	make -f Makefile_infra clean-task-definition
-	make -f Makefile_infra clean-elb
-	make -f Makefile_infra clean-ecs
-	make -f Makefile_infra clean-cloudwatch
+	make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} clean-task-definition
+	make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} clean-elb
+	make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} clean-ecs
+	make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} clean-cloudwatch
 
-	make -f Makefile_infra nuke-ecs
-	make -f Makefile_infra nuke-vpc
-	make -f Makefile_infra nuke-global
+	make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} nuke-ecs
+	make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} nuke-vpc
+	make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} nuke-global
 
-	make clean-local
+	make -f ${PATH_ABS_ROOT}/${FILE_NAME} clean-local
 clean-local: ## Clean the local files and folders
 	echo "Delete state backup files..."; for folderPath in $(shell find . -type f -name ".terraform.lock.hcl"); do echo $$folderPath; rm -Rf $$folderPath; done; \
 	echo "Delete override files..."; for filePath in $(shell find . -type f -name "*override*"); do echo $$filePath; rm $$filePath; done; \
@@ -56,18 +53,18 @@ list-override-files:
 	find ./live -type f -name "*${OVERRIDE_EXTENSION}*"
 
 prepare-terragrunt: ## Setup the environment
-	make prepare-convention-config-file \
+	make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-convention-config-file \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION}
-	make prepare-aws-account-config-file \
-		PATH_ACCOUNT=${PATH_ABS_AWS}
+	make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-aws-account-config-file \
+		PATH_ACCOUNT=${PATH_ABS_ROOT}/live/aws \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		DOMAIN_NAME=${DOMAIN_NAME} \
 		DOMAIN_SUFFIX=${DOMAIN_SUFFIX} \
 		AWS_REGION_NAME=${AWS_REGION_NAME} \
 		AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
 		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
-	make prepare-aws-account-config-file \
-		PATH_ACCOUNT=live/_global
+	make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-aws-account-config-file \
+		PATH_ACCOUNT=live/_global \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		DOMAIN_NAME=${DOMAIN_NAME} \
 		DOMAIN_SUFFIX=${DOMAIN_SUFFIX} \
@@ -75,7 +72,7 @@ prepare-terragrunt: ## Setup the environment
 		AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
 		AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
 prepare-convention-config-file:
-	$(eval ORGANIZATION_NAME=dresspeng)
+	$(eval ORGANIZATION_NAME=vistimi)
 
 	$(eval MODULES_GIT_HOST_AUTH_METHOD=https)
 	$(eval MODULES_GIT_HOST=github.com)
@@ -85,8 +82,8 @@ prepare-convention-config-file:
 	$(eval MODULES_REPOSITORY_VISIBILITY=private)
 	$(eval MODULES_BRANCH_NAME=trunk)
 
-	$(call check_defined, OVERRIDE_EXTENSION, PATH_ABS_LIVE)
-	cat <<-EOF > ${PATH_ABS_LIVE}/convention_${OVERRIDE_EXTENSION}.hcl 
+	$(call check_defined, OVERRIDE_EXTENSION)
+	cat <<-EOF > ${PATH_ABS_ROOT}/live/convention_${OVERRIDE_EXTENSION}.hcl 
 	locals {
 		override_extension_name			= "${OVERRIDE_EXTENSION}"
 		organization_name				= "${ORGANIZATION_NAME}"
@@ -126,15 +123,15 @@ prepare-microservice-config-file:
 prepare-microservice:
 	$(call check_defined, OVERRIDE_EXTENSION, GITHUB_TOKEN, TERRAGRUNT_CONFIG_PATH, ORGANIZATION_NAME, REPOSITORY_NAME, BRANCH_NAME, DEFAULT_BRANCH_NAME)
 	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
-	$(eval branches=$(shell make -f Makefile_infra gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
+	$(eval branches=$(shell make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
 	if [[ '$(shell echo ${branches} | grep -o "${BRANCH_NAME}" | wc -l)' == '0' ]]; then
 		$(eval BRANCH_NAME_MICROSERVICE=${DEFAULT_BRANCH_NAME})
 		echo -e '\033[43mWarning\033[0m' ::: BRANCH_NAME ${BRANCH_NAME} not found, using ${DEFAULT_BRANCH_NAME}
-		make prepare-microservice-config-file \
+		make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice-config-file \
 			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
-		make -f Makefile_infra gh-load-folder \
+		make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} gh-load-folder \
 			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 			GITHUB_TOKEN=${GITHUB_TOKEN} \
 			REPOSITORY_CONFIG_PATH_FOLDER=${REPOSITORY_CONFIG_PATH_FOLDER} \
@@ -144,11 +141,11 @@ prepare-microservice:
 			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
 	else
 		$(eval BRANCH_NAME_MICROSERVICE=${BRANCH_NAME})
-		make prepare-microservice-config-file \
+		make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice-config-file \
 			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
-		make -f Makefile_infra gh-load-folder \
+		make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} gh-load-folder \
 			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 			GITHUB_TOKEN=${GITHUB_TOKEN} \
 			REPOSITORY_CONFIG_PATH_FOLDER=${REPOSITORY_CONFIG_PATH_FOLDER} \
@@ -168,7 +165,7 @@ prepare-scraper-backend:
 	$(eval CLOUD_HOST=aws)
 
 	$(call check_defined, OVERRIDE_EXTENSION, GITHUB_TOKEN, TERRAGRUNT_CONFIG_PATH, FLICKR_PRIVATE_KEY, FLICKR_PUBLIC_KEY, UNSPLASH_PRIVATE_KEY, UNSPLASH_PUBLIC_KEY, PEXELS_PUBLIC_KEY, AWS_REGION_NAME, AWS_ACCESS_KEY, AWS_SECRET_KEY)
-	make prepare-microservice \
+	make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		GITHUB_TOKEN=${GITHUB_TOKEN} \
 		REPOSITORY_CONFIG_PATH_FOLDER=${REPOSITORY_CONFIG_PATH_FOLDER} \
@@ -177,7 +174,7 @@ prepare-scraper-backend:
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		DEFAULT_BRANCH_NAME=${DEFAULT_BRANCH_NAME} \
 		BRANCH_NAME=${BRANCH_NAME}
-	make prepare-scraper-backend-env \
+	make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-scraper-backend-env \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		COMMON_NAME=${COMMON_NAME} \
@@ -192,8 +189,8 @@ prepare-scraper-backend:
 		AWS_SECRET_KEY=${AWS_SECRET_KEY}
 prepare-scraper-backend-env:
 	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
-	$(eval MAKEFILE=$(shell find ${TERRAGRUNT_CONFIG_PATH} -type f -name "*Makefile*"))
-	make -f ${MAKEFILE} prepare \
+	$(eval MAKEFILE_OVERRIDE=$(shell find ${TERRAGRUNT_CONFIG_PATH} -type f -name "*Makefile*"))
+	make -f ${MAKEFILE_OVERRIDE} prepare \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		ENV_FOLDER_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		CLOUD_HOST=${CLOUD_HOST} \
@@ -217,7 +214,7 @@ prepare-scraper-frontend:
 	$(eval DEFAULT_BRANCH_NAME=trunk)
 
 	$(call check_defined, OVERRIDE_EXTENSION, GITHUB_TOKEN, TERRAGRUNT_CONFIG_PATH, NEXT_PUBLIC_API_URL)
-	make prepare-microservice \
+	make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		GITHUB_TOKEN=${GITHUB_TOKEN} \
 		REPOSITORY_CONFIG_PATH_FOLDER=${REPOSITORY_CONFIG_PATH_FOLDER} \
@@ -226,14 +223,14 @@ prepare-scraper-frontend:
 		REPOSITORY_NAME=${REPOSITORY_NAME} \
 		DEFAULT_BRANCH_NAME=${DEFAULT_BRANCH_NAME} \
 		BRANCH_NAME=${BRANCH_NAME}
-	make prepare-scraper-frontend-env \
+	make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-scraper-frontend-env \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 prepare-scraper-frontend-env:
 	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
-	$(eval MAKEFILE=$(shell find ${TERRAGRUNT_CONFIG_PATH} -type f -name "*Makefile*"))
-	make -f ${MAKEFILE} prepare \
+	$(eval MAKEFILE_OVERRIDE=$(shell find ${TERRAGRUNT_CONFIG_PATH} -type f -name "*Makefile*"))
+	make -f ${MAKEFILE_OVERRIDE} prepare \
 		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
 		ENV_FOLDER_PATH=${TERRAGRUNT_CONFIG_PATH} \
 		NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \

@@ -11,27 +11,50 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  backend_prefix = "dresspeng"
-  projects = {
-    scraper = ["scraper-backend", "scraper-frontend"]
-  }
-
   level_statements = [
     {
-      sid       = "IamUser"
-      actions   = ["iam:ListMFADevices", "iam:CreateVirtualMFADevice", "iam:DeactivateMFADevice", "iam:ListAccessKeys"]
+      sid       = "S3Read"
+      actions   = ["s3:ListBucket", "s3:ListAllMyBuckets"]
       effect    = "Allow"
       resources = ["*"]
     },
     {
-      sid       = "S3Read"
-      actions   = ["s3:DescribeJob", "s3:Get*", "s3:List*"] // s3:ListBucket
+      sid = "EcrReadExternal"
+      actions = [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+      ]
       effect    = "Allow"
       resources = ["*"]
+      conditions = [
+        {
+          test     = "StringNotEquals"
+          variable = "aws:PrincipalAccount"
+          values   = [local.account_id]
+        }
+      ]
+    },
+    {
+      sid = "EcrPublicReadExternal"
+      actions = [
+        "ecr-public:GetAuthorizationToken",
+        "ecr-public:BatchCheckLayerAvailability",
+      ]
+      effect    = "Allow"
+      resources = ["*"]
+      conditions = [
+        {
+          test     = "StringNotEquals"
+          variable = "aws:PrincipalAccount"
+          values   = [local.account_id]
+        }
+      ]
     },
   ]
 
-  levels = [{ key = "organization", value = "dress" }, { key = "team", value = "scraper" }]
+  levels = [{ key = "organization", value = "vistimi" }, { key = "team", value = "scraper" }]
 
   aws = {
     levels = local.levels
@@ -61,78 +84,53 @@ locals {
           name = "olivier"
           statements = [
             {
-              sid = "EcrFull"
+              sid = "IAMFull"
               actions = [
-                "ecr:GetAuthorizationToken",
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-              ]
-              effect    = "Allow"
-              resources = ["*"]
-            },
-            {
-              sid = "EcrPublicFull"
-              actions = [
-                "ecr-public:GetAuthorizationToken",
-                "ecr-public:BatchCheckLayerAvailability",
+                "iam:*",
               ]
               effect    = "Allow"
               resources = ["*"]
             },
           ]
         }]
-        statements = [
-          {
-            sid       = "S3Backend"
-            actions   = ["s3:*"]
-            effect    = "Allow"
-            resources = [for repository_name in local.projects.scraper : "arn:aws:s3:::${local.backend_prefix}-${repository_name}-olivier-*"]
-          },
-        ]
+        statements = []
       }
       machine = {
         force_destroy            = true
         pw_length                = 20
         project_names            = ["scraper"]
         github_store_environment = true
-        users = [{
-          name = "live"
-          statements = [
-            {
-              sid = "EcrFull"
-              actions = [
-                "ecr:GetAuthorizationToken",
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-              ]
-              effect    = "Allow"
-              resources = ["*"]
-            },
-            {
-              sid = "EcrPublicFull"
-              actions = [
-                "ecr-public:GetAuthorizationToken",
-                "ecr-public:BatchCheckLayerAvailability",
-              ]
-              effect    = "Allow"
-              resources = ["*"]
-            },
-            {
-              sid       = "S3Backend"
-              actions   = ["s3:*"]
-              effect    = "Allow"
-              resources = [for repository_name in local.projects.scraper : "arn:aws:s3:::${local.backend_prefix}-${repository_name}-live-*"]
-            },
-            {
-              sid       = "DynamodbBackend"
-              actions   = ["dynamodb:*"]
-              effect    = "Allow"
-              resources = [for repository_name in local.projects.scraper : "arn:aws:dynamodb:${local.account_region_name}:${local.account_id}:table/${local.backend_prefix}-${repository_name}-live-*"]
-            },
-          ]
-        }]
+        users = [
+          {
+            name       = "live"
+            statements = []
+          },
+          {
+            name = "test"
+            statements = [
+              {
+                sid = "EcrReadExternal"
+                actions = [
+                  "ecr:GetAuthorizationToken",
+                  "ecr:BatchCheckLayerAvailability",
+                  "ecr:GetDownloadUrlForLayer",
+                  "ecr:BatchGetImage",
+                ]
+                effect    = "Allow"
+                resources = ["*"]
+              },
+              {
+                sid = "EcrPublicReadExternal"
+                actions = [
+                  "ecr-public:GetAuthorizationToken",
+                  "ecr-public:BatchCheckLayerAvailability",
+                ]
+                effect    = "Allow"
+                resources = ["*"]
+              },
+            ]
+          }
+        ]
       }
       base = {
         force_destroy            = true

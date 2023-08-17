@@ -16,7 +16,14 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  github = local.organization_vars.locals.github
+}
+
+terraform {
+  source = "${local.modules_git_prefix}//projects/module/_global/level?ref=${local.modules_branch_name}"
+}
+
+inputs = {
+  name_prefix = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
   aws = merge(
     local.organization_vars.locals.aws,
     {
@@ -27,13 +34,5 @@ locals {
       )
     }
   )
-}
-
-terraform {
-  source = "${local.modules_git_prefix}//projects/module/_global/level?ref=${local.modules_branch_name}"
-}
-
-inputs = {
-  aws    = local.aws
-  github = local.github
+  github = local.organization_vars.locals.github
 }

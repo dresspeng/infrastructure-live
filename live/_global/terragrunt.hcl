@@ -1,12 +1,15 @@
 locals {
-  convention_vars = read_terragrunt_config(find_in_parent_folders("convention_override.hcl"))
-  account_vars    = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
+  convention_tmp_vars = read_terragrunt_config(find_in_parent_folders("convention_override.hcl"))
+  convention_vars     = read_terragrunt_config(find_in_parent_folders("convention_override.hcl"))
+  account_vars        = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
 
   organization_name = local.convention_vars.locals.organization_name
 
   account_region_name = local.account_vars.locals.account_region_name
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
+
+  name_prefix = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
 
   tags = merge(
     local.convention_vars.locals.tags,
@@ -55,8 +58,8 @@ remote_state {
     encrypt             = true
     key                 = "${path_relative_to_include()}/terraform.tfstate"
     region              = local.account_region_name
-    bucket              = lower(join("-", compact([local.organization_name, "tf-state"])))
-    dynamodb_table      = lower(join("-", compact([local.organization_name, "tf-locks"])))
+    bucket              = lower(join("-", compact([local.name_prefix, "tf-state"])))
+    dynamodb_table      = lower(join("-", compact([local.name_prefix, "tf-locks"])))
     s3_bucket_tags      = local.tags
     dynamodb_table_tags = local.tags
   }

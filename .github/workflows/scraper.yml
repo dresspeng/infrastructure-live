@@ -11,9 +11,19 @@ on:
       #   type: environment
       #   description: "The docker environment"
       #   required: true
-      running:
+      backend-running:
         type: boolean
-        description: "Up and running"
+        description: "Backend: Up and running"
+        required: true
+        default: true
+      frontend-running:
+        type: boolean
+        description: "Frontend: Up and running"
+        required: true
+        default: true
+      labelstudio-running:
+        type: boolean
+        description: "Labelstudio: Up and running"
         required: true
         default: true
 
@@ -74,10 +84,11 @@ jobs:
 
   backend:
     needs: [setup]
+    if: ${{ inputs.backend-running }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
-      image: '${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}'
+      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}
       credentials:
         username: AWS
         password: ${{ needs.setup.outputs.ECR_LOGIN_PASSWORD }}
@@ -88,8 +99,10 @@ jobs:
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }} 
     outputs:
-      DNS_URL: ${{ steps.backend.outputs.DNS_URL }}
+      DNS_URL: ${{ steps.apply.outputs.DNS_URL }}
 
     steps:
       - name: Checkout
@@ -127,11 +140,9 @@ jobs:
             AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
             AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }}  \
             AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
-# REPOSITORIES_AWS_REGION_NAME=${{ needs.repository.outputs.REPOSITORIES_AWS_REGION_NAME }} \
-# REPOSITORIES_AWS_ACCOUNT_ID=${{ needs.repository.outputs.REPOSITORIES_AWS_ACCOUNT_ID}}
 
-      - name: Terragrunt backend
-        id: backend
+      - name: Terragrunt init & apply
+        id: apply
         run: |
           TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
 
@@ -150,7 +161,7 @@ jobs:
 
           make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-          if [[ ${{ inputs.running }} == false ]]; then
+          if [[ ${{ inputs.backend-running }} == false ]]; then
             make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
           else            
             make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
@@ -166,10 +177,11 @@ jobs:
 
   frontend:
     needs: [setup, backend]
+    if: ${{ inputs.backend-running }} && ${{ inputs.frontend-running }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
-      image: '${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}'
+      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}
       credentials:
         username: AWS
         password: ${{ needs.setup.outputs.ECR_LOGIN_PASSWORD }}
@@ -180,8 +192,10 @@ jobs:
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }} 
     outputs:
-      DNS_URL: ${{ steps.frontend.outputs.DNS_URL }}
+      DNS_URL: ${{ steps.apply.outputs.DNS_URL }}
 
     steps:
       - name: Checkout
@@ -214,16 +228,14 @@ jobs:
         id: prepare
         run: |
           make prepare-terragrunt \
-            DOMAIN_NAME=${{ vars.DOMAIN_NAME }}  \
-            DOMAIN_SUFFIX=${{ vars.DOMAIN_SUFFIX }}  \
-            AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
-            AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }}  \
-            AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
-# REPOSITORIES_AWS_REGION_NAME=${{ needs.repository.outputs.REPOSITORIES_AWS_REGION_NAME }} \
-# REPOSITORIES_AWS_ACCOUNT_ID=${{ needs.repository.outputs.REPOSITORIES_AWS_ACCOUNT_ID}}
+            DOMAIN_NAME=$DOMAIN_NAME  \
+            DOMAIN_SUFFIX=$DOMAIN_SUFFIX  \
+            AWS_REGION_NAME=$AWS_REGION_NAME \
+            AWS_PROFILE_NAME=$AWS_PROFILE_NAME  \
+            AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
 
-      - name: Terragrunt frontend
-        id: frontend
+      - name: Terragrunt init & apply
+        id: apply
         run: |
           export TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
 
@@ -235,14 +247,77 @@ jobs:
 
           make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-          if [[ ${{ inputs.running }} == false ]]; then
+          if [[ ${{ inputs.frontend-running }} == false ]]; then
             make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
+            terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.microservice
           else
             make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
             DNS_URL=$(make -f Makefile_infra output-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
             if [[ -z ${DNS_URL} ]]; then
               echo -e '\033[41mDNS_URL\033[0m' missing
+              exit 42
+            fi
+            echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}
+            echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
+          fi
+
+  labelstudio:
+    needs: [setup]
+    if: ${{ inputs.labelstudio-running }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment-machine }}
+    container: 
+      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}:1.4.4
+      credentials:
+        username: AWS
+        password: ${{ needs.setup.outputs.ECR_LOGIN_PASSWORD }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_TERRA_TOKEN }}
+      AWS_REGION_NAME: eu-north-1
+      AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
+    outputs:
+      DNS_URL: ${{ steps.apply.outputs.DNS_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup AWS CLI
+        id: setup
+        run: |
+          make aws-auth
+
+      - name: Terragrunt prepare
+        id: prepare
+        run: |
+          make prepare-terragrunt \
+            DOMAIN_NAME=$DOMAIN_NAME  \
+            DOMAIN_SUFFIX=$DOMAIN_SUFFIX  \
+            AWS_REGION_NAME=$AWS_REGION_NAME \
+            AWS_PROFILE_NAME=$AWS_PROFILE_NAME  \
+            AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
+
+      - name: Terragrunt init & apply
+        id: apply
+        run: |
+          TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/labelstudio
+
+          make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
+
+          if [[ ${{ inputs.labelstudio-running }} == false ]]; then
+            terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.labelstudio
+          else            
+            make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
+
+            DNS_URL=$(terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json labelstudio | jq '.load_balancer_host')
+            if [[ -z ${DNS_URL} ]]; then
+              echo -e '\033[41mDNS_URL\033[0m' ::: ${DNS_URL}
               exit 42
             fi
             echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}

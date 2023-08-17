@@ -18,9 +18,6 @@ locals {
 
   modules_git_prefix = local.convention_vars.locals.modules_git_prefix
 
-  name      = local.vpc_vars.locals.name
-  cidr_ipv4 = local.vpc_vars.locals.cidr_ipv4
-
 }
 
 terraform {
@@ -28,8 +25,9 @@ terraform {
 }
 
 inputs = {
-  name      = local.name
-  cidr_ipv4 = local.cidr_ipv4
+  name      = local.vpc_vars.locals.name
+  cidr_ipv4 = local.vpc_vars.locals.cidr_ipv4
+  # nat       = local.vpc_vars.locals.nat
   tags = merge(
     local.convention_tmp_vars.locals.tags,
     local.account_vars.locals.tags,

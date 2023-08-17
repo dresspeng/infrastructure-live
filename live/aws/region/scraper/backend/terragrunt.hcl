@@ -29,8 +29,6 @@ locals {
   vpc                = local.service_vars.locals.vpc
   project_name       = local.service_vars.locals.project_name
   service_name       = local.service_vars.locals.service_name
-  git_host_name      = local.service_vars.locals.git_host_name
-  organization_name  = local.service_vars.locals.organization_name
   repository_name    = local.service_vars.locals.repository_name
   pricing_names      = local.service_vars.locals.pricing_names
   deployment_type    = local.service_vars.locals.deployment_type
@@ -109,12 +107,8 @@ terraform {
 }
 
 inputs = {
+  name_prefix = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
   name_suffix = local.name
-  tags = merge(
-    local.convention_tmp_vars.locals.tags,
-    local.account_vars.locals.tags,
-    local.service_vars.locals.tags,
-  )
 
   vpc = local.vpc
 
@@ -192,4 +186,10 @@ inputs = {
     force_destroy = false
     versioning    = true
   }
+
+  tags = merge(
+    local.convention_tmp_vars.locals.tags,
+    local.account_vars.locals.tags,
+    local.service_vars.locals.tags,
+  )
 }
