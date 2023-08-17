@@ -7,10 +7,6 @@ on:
         type: environment
         description: "The deployment environment"
         required: true
-      # environment-repository:
-      #   type: environment
-      #   description: "The docker environment"
-      #   required: true
       backend-running:
         type: boolean
         description: "Backend: Up and running"
@@ -34,19 +30,6 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
-  # repository:
-  #   runs-on: ubuntu-latest
-  #   environment: ${{ inputs.environment-machine }}
-  #   outputs:
-  #     REPOSITORIES_AWS_REGION_NAME: ${{ steps.get-output.outputs.REPOSITORIES_AWS_REGION_NAME }}
-  #     REPOSITORIES_AWS_ACCOUNT_ID: ${{ steps.get-output.outputs.REPOSITORIES_AWS_ACCOUNT_ID }}
-  #   steps:
-  #     - name: Get env
-  #       id: get-output
-  #       run: |
-  #         echo "REPOSITORIES_AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }}" >> $GITHUB_OUTPUT
-  #         echo "REPOSITORIES_AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
-
   setup:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
@@ -88,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
-      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}
+      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}:latest
       credentials:
         username: AWS
         password: ${{ needs.setup.outputs.ECR_LOGIN_PASSWORD }}
@@ -181,7 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
-      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}
+      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}:latest
       credentials:
         username: AWS
         password: ${{ needs.setup.outputs.ECR_LOGIN_PASSWORD }}

@@ -170,6 +170,16 @@ inputs = {
 
   bucket_label = local.service_vars.locals.bucket_label
 
+  create_acm_certificate = local.service_vars.locals.create_acm_certificate
+  route53 = {
+    zone = {
+      name = "${local.domain_name}.${local.domain_suffix}"
+    }
+    record = {
+      subdomain_name = format("%s%s", local.branch_name == "trunk" ? "" : "${local.branch_name}.", local.repository_name)
+    }
+  }
+
   tags = merge(
     local.convention_tmp_vars.locals.tags,
     local.account_vars.locals.tags,

@@ -11,10 +11,29 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
+  # {
+  #   sid       = "EcrWrite"
+  #   actions   = flatten([for perm in ["write", "permission_management", "tagging"] : local.action_vars.locals["ecr_${perm}"]])
+  #   effect    = "Allow"
+  #   resources = ["*"]
+  # },
+
   level_statements = [
     {
       sid       = "S3Read"
       actions   = ["s3:ListBucket", "s3:ListAllMyBuckets"]
+      effect    = "Allow"
+      resources = ["*"]
+    },
+    {
+      sid       = "EcrAuth"
+      actions   = ["ecr:GetAuthorizationToken"]
+      effect    = "Allow"
+      resources = ["*"]
+    },
+    {
+      sid       = "EcrPublicAuth"
+      actions   = ["ecr-public:GetAuthorizationToken"]
       effect    = "Allow"
       resources = ["*"]
     },
@@ -64,11 +83,11 @@ locals {
         force_destroy = true
         pw_length     = 20
         users = [{
-          name = "root"
+          name = "perm"
           statements = [
             {
               sid       = "All"
-              actions   = ["*"]
+              actions   = ["iam:*"]
               effect    = "Allow"
               resources = ["*"]
             },
@@ -81,17 +100,8 @@ locals {
         project_names            = ["scraper"]
         github_store_environment = true
         users = [{
-          name = "olivier"
-          statements = [
-            {
-              sid = "IAMFull"
-              actions = [
-                "iam:*",
-              ]
-              effect    = "Allow"
-              resources = ["*"]
-            },
-          ]
+          name       = "olivier"
+          statements = []
         }]
         statements = []
       }
@@ -106,29 +116,8 @@ locals {
             statements = []
           },
           {
-            name = "test"
-            statements = [
-              {
-                sid = "EcrReadExternal"
-                actions = [
-                  "ecr:GetAuthorizationToken",
-                  "ecr:BatchCheckLayerAvailability",
-                  "ecr:GetDownloadUrlForLayer",
-                  "ecr:BatchGetImage",
-                ]
-                effect    = "Allow"
-                resources = ["*"]
-              },
-              {
-                sid = "EcrPublicReadExternal"
-                actions = [
-                  "ecr-public:GetAuthorizationToken",
-                  "ecr-public:BatchCheckLayerAvailability",
-                ]
-                effect    = "Allow"
-                resources = ["*"]
-              },
-            ]
+            name       = "test"
+            statements = []
           }
         ]
       }
@@ -140,18 +129,6 @@ locals {
           {
             name = "docker"
             statements = [
-              # {
-              #   sid       = "EcrWrite"
-              #   actions   = flatten([for perm in ["write", "permission_management", "tagging"] : local.action_vars.locals["ecr_${perm}"]])
-              #   effect    = "Allow"
-              #   resources = ["*"]
-              # },
-              # {
-              #   sid       = "EcrPublicWrite"
-              #   actions   = flatten([for perm in ["write", "permission_management", "tagging"] : local.action_vars.locals["ecr_public_${perm}"]])
-              #   effect    = "Allow"
-              #   resources = ["*"]
-              # },
               {
                 sid       = "EcrFull"
                 actions   = ["ecr:*"]
@@ -163,6 +140,18 @@ locals {
                 actions   = ["ecr-public:*"]
                 effect    = "Allow"
                 resources = ["*"]
+              },
+              {
+                sid       = "DynamodbBackend"
+                actions   = ["dynamodb:*"]
+                effect    = "Allow"
+                resources = ["arn:aws:dynamodb:*:${local.account_id}:table/vi-tf-locks"]
+              },
+              {
+                sid       = "BucketBackend"
+                actions   = ["s3:*"]
+                effect    = "Allow"
+                resources = ["arn:aws:s3:::vi-tf-state"]
               },
             ]
           }
