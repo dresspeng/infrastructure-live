@@ -25,9 +25,9 @@ on:
 
 env:
   ECR_PRIVACY: ${{ vars.CONTAINER_REGISTRY_PRIVACY }}
-  IMAGE_TAG: latest
   ORGANIZATION_NAME: ${{ github.repository_owner }}
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  ECR_REPOSITORY_EXTENSION: '-bin'
 
 jobs:
   setup:
@@ -40,6 +40,7 @@ jobs:
       ECR_REPOSITORY_NAME: ${{ steps.get-output.outputs.ECR_REPOSITORY_NAME }}
       ECR_LOGIN_PASSWORD: ${{ steps.get-output.outputs.ECR_LOGIN_PASSWORD }}
       ECR_REGISTRY_URI: ${{ steps.get-output.outputs.ECR_REGISTRY_URI }}
+      ECR_REPOSITORY_EXTENSION: ${{ steps.get-output.outputs.ECR_REPOSITORY_EXTENSION }}
 
     steps:
       - name: setup AWS CLI
@@ -56,6 +57,7 @@ jobs:
 
           ECR_REPOSITORY_NAME=$(echo $REPOSITORY_NAME-$BRANCH_NAME | tr A-Z a-z)
           echo "ECR_REPOSITORY_NAME=$ECR_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          echo "ECR_REPOSITORY_EXTENSION=$ECR_REPOSITORY_EXTENSION" >> $GITHUB_OUTPUT
 
           if [[ $ECR_PRIVACY == private ]]; then
             echo "ECR_LOGIN_PASSWORD=$(aws ecr get-login-password --region ${{ vars.AWS_REGION_NAME }})" >> $GITHUB_OUTPUT
@@ -71,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
-      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}:latest
+      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}${{ needs.setup.outputs.ECR_REPOSITORY_EXTENSION }}:latest
       credentials:
         username: AWS
         password: ${{ needs.setup.outputs.ECR_LOGIN_PASSWORD }}
@@ -164,7 +166,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
-      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}:latest
+      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}${{ needs.setup.outputs.ECR_REPOSITORY_EXTENSION }}:latest
       credentials:
         username: AWS
         password: ${{ needs.setup.outputs.ECR_LOGIN_PASSWORD }}
@@ -250,8 +252,8 @@ jobs:
     if: ${{ inputs.labelstudio-running }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
-    container: 
-      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}:1.4.4
+    container:
+      image: ${{ needs.setup.outputs.ECR_REGISTRY_URI }}/${{ needs.setup.outputs.ECR_REPOSITORY_NAME}}${{ needs.setup.outputs.ECR_REPOSITORY_EXTENSION }}:1.4.4
       credentials:
         username: AWS
         password: ${{ needs.setup.outputs.ECR_LOGIN_PASSWORD }}

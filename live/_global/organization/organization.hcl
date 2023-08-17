@@ -91,6 +91,18 @@ locals {
               effect    = "Allow"
               resources = ["*"]
             },
+            {
+              sid       = "DynamodbBackend"
+              actions   = ["dynamodb:*"]
+              effect    = "Allow"
+              resources = ["arn:aws:dynamodb:*:${local.account_id}:table/vi-tf-locks"]
+            },
+            {
+              sid       = "BucketBackend"
+              actions   = ["s3:*"]
+              effect    = "Allow"
+              resources = ["arn:aws:s3:::vi-tf-state"]
+            },
           ]
         }]
       }
@@ -112,13 +124,33 @@ locals {
         github_store_environment = true
         users = [
           {
-            name       = "live"
-            statements = []
+            name = "live"
           },
           {
-            name       = "test"
-            statements = []
+            name = "test"
           }
+        ]
+        statements = [
+          {
+            sid = "EcrReadExternal"
+            actions = [
+              "ecr:GetAuthorizationToken",
+              "ecr:BatchCheckLayerAvailability",
+              "ecr:GetDownloadUrlForLayer",
+              "ecr:BatchGetImage",
+            ]
+            effect    = "Allow"
+            resources = ["arn:aws:ecr:*:${local.account_id}:repository/infrastructure-live-*", "arn:aws:ecr:*:${local.account_id}:repository/infrastructure-modules-*"]
+          },
+          {
+            sid = "EcrPublicReadExternal"
+            actions = [
+              "ecr-public:GetAuthorizationToken",
+              "ecr-public:BatchCheckLayerAvailability",
+            ]
+            effect    = "Allow"
+            resources = ["*"]
+          },
         ]
       }
       base = {
@@ -140,18 +172,6 @@ locals {
                 actions   = ["ecr-public:*"]
                 effect    = "Allow"
                 resources = ["*"]
-              },
-              {
-                sid       = "DynamodbBackend"
-                actions   = ["dynamodb:*"]
-                effect    = "Allow"
-                resources = ["arn:aws:dynamodb:*:${local.account_id}:table/vi-tf-locks"]
-              },
-              {
-                sid       = "BucketBackend"
-                actions   = ["s3:*"]
-                effect    = "Allow"
-                resources = ["arn:aws:s3:::vi-tf-state"]
               },
             ]
           }
