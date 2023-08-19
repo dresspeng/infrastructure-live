@@ -27,7 +27,7 @@ env:
   ECR_PRIVACY: ${{ vars.CONTAINER_REGISTRY_PRIVACY }}
   ORGANIZATION_NAME: ${{ github.repository_owner }}
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-  ECR_REPOSITORY_EXTENSION: '-bin'
+  ECR_REPOSITORY_EXTENSION: ''
 
 jobs:
   setup:
@@ -92,6 +92,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Versions
+        run: |
+          terraform --version
+          terragrunt --version
 
       - name: Setup SSH
         run: |
@@ -162,7 +166,7 @@ jobs:
 
   frontend:
     needs: [setup, backend]
-    if: ${{ inputs.backend-running }} && ${{ inputs.frontend-running }}
+    if: ${{ inputs.backend-running }} && ${{ inputs.frontend-running }} && ${{ contains(join(needs.*.result, ','), 'success') }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
@@ -185,6 +189,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Versions
+        run: |
+          terraform --version
+          terragrunt --version
 
       - name: Setup SSH
         run: |
@@ -272,6 +280,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Versions
+        run: |
+          terraform --version
+          terragrunt --version
 
       - name: Setup AWS CLI
         id: setup

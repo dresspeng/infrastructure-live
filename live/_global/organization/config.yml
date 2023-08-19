@@ -1,0 +1,142 @@
+aws:
+  levels:
+    [
+      { key: "organization", value: "vistimi" },
+      { key: "team", value: "scraper" },
+    ]
+  groups:
+    admin:
+      force_destroy: true
+      pw_length: 20
+      users:
+        - name: "perm"
+          statements:
+            - sid: "IAMAll"
+              actions: ["iam:*"]
+              effect: "Allow"
+              resources: ["*"]
+            - sid: "SecretmanagerAll"
+              actions: ["secretsmanager:*"]
+              effect: "Allow"
+              resources: ["*"]
+            - sid: "DynamodbBackendOrg"
+              actions: ["dynamodb:*"]
+              effect: "Allow"
+              resources:
+                [
+                  "arn:aws:dynamodb:*:${account_id}:table/${backend_dynamodb_table_name}",
+                ]
+            - sid: "BucketBackendOrg"
+              actions: ["s3:*"]
+              effect: "Allow"
+              resources: ["arn:aws:s3:::${backend_bucket_name}*"]
+    dev:
+      force_destroy: true
+      pw_length: 20
+      project_names: ["scraper"]
+      github_store_environment: true
+      users:
+        - name: "olivier"
+    machine:
+      force_destroy: true
+      pw_length: 20
+      project_names: ["scraper"]
+      github_store_environment: true
+      users:
+        - name: "live"
+        - name: "test"
+      statements:
+        - sid: "EcrReadExternal"
+          actions:
+            [
+              "ecr:GetAuthorizationToken",
+              "ecr:BatchCheckLayerAvailability",
+              "ecr:GetDownloadUrlForLayer",
+              "ecr:BatchGetImage",
+            ]
+          effect: "Allow"
+          resources:
+            [
+              "arn:aws:ecr:*:${account_id}:repository/infrastructure-live-*",
+              "arn:aws:ecr:*:${account_id}:repository/infrastructure-modules-*",
+            ]
+        - sid: "EcrPublicReadExternal"
+          actions:
+            [
+              "ecr-public:GetAuthorizationToken",
+              "ecr-public:BatchCheckLayerAvailability",
+            ]
+          effect: "Allow"
+          resources: ["*"] # TODO: restrain for public ones
+    base:
+      force_destroy: true
+      pw_length: 20
+      github_store_environment: true
+      users:
+        - name: "docker"
+          statements:
+            - sid: "EcrFull"
+              actions: ["ecr:*"]
+              effect: "Allow"
+              resources: ["*"]
+            - sid: "EcrPublicFull"
+              actions: ["ecr-public:*"]
+              effect: "Allow"
+              resources: ["*"]
+  statements:
+    - sid: "S3Read"
+      actions: ["s3:ListBucket", "s3:ListAllMyBuckets"]
+      effect: "Allow"
+      resources: ["*"]
+    - sid: "EcrAuth"
+      actions: ["ecr:GetAuthorizationToken"]
+      effect: "Allow"
+      resources: ["*"]
+    - sid: "EcrPublicAuth"
+      actions: ["ecr-public:GetAuthorizationToken"]
+      effect: "Allow"
+      resources: ["*"]
+    - sid: "EcrReadExternal"
+      actions:
+        [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+        ]
+      effect: "Allow"
+      resources: ["*"]
+      conditions:
+        - test: "StringNotEquals"
+          variable: "aws:PrincipalAccount"
+          values: ["${account_id}"]
+    - sid: "EcrPublicReadExternal"
+      actions:
+        [
+          "ecr-public:GetAuthorizationToken",
+          "ecr-public:BatchCheckLayerAvailability",
+        ]
+      effect: "Allow"
+      resources: ["*"]
+      conditions:
+        - test: "StringNotEquals"
+          variable: "aws:PrincipalAccount"
+          values: ["${account_id}"]
+  external_assume_role_arns: []
+  store_secrets: true
+  tags: {}
+
+github:
+  accesses:
+    - owner: dresspeng
+      name: infrastructure-modules
+    - owner: dresspeng
+      name: infrastructure-live
+    - owner: dresspeng
+      name: scraper-backend
+    - owner: dresspeng
+      name: scraper-frontend
+  repositories:
+    - variables:
+        - key: ECR_ENV_NAME
+          value: docker

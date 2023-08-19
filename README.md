@@ -70,6 +70,67 @@ terragrunt graph-dependencies | dot -Tsvg > graph.svg
 
 [Github example](https://github.com/gruntwork-io/terragrunt-infrastructure-live-example)
 
+## yml/yaml
+
+`yml` files can be used for configuration, as they are human readable and commonly used. There is a similarity with `hcl` language:
+
+- array
+```hcl
+array = ["a", "b", "c"]
+```
+```yml
+array:
+  - a
+  - b
+  - c
+```
+
+- object/map
+```hcl
+object = { a = 1, b = 2, c = 3 }
+```
+```yml
+object:
+  a: 1
+  b: 2
+  c: 3
+```
+
+- array of objects
+```hcl
+arr_objs = [{ a = 1 }, { b = 2 }]
+```
+```yml
+arr_objs:
+  - a: 1
+  - b: 2
+```
+
+If you have a file without variables, load it as follow:
+```hcl
+config = yamldecode(file("${get_terragrunt_dir()}/config.yml"))
+```
+
+If you have a file with variables, load it as follow:
+```hcl
+config = yamldecode(
+  templatefile(
+    "${get_terragrunt_dir()}/config.yml",
+    {
+      var_1 = "a"
+      var_2 = "b"
+    }
+  )
+)
+```
+```yml
+statements:
+  - name: ${var_1}
+  - name: ${var_1}
+  - name: ${var_1}
+  - name: ${var_2}
+```
+
 ## env
 
 #### devcontainer
@@ -94,7 +155,13 @@ FLICKR_PUBLIC_KEY=123
 UNSPLASH_PRIVATE_KEY=123
 UNSPLASH_PUBLIC_KEY=123
 PEXELS_PUBLIC_KEY=123
+
+# ssh
+SSH_PUBLIC_KEY="***\n***\n***"
+SSH_PRIVATE_KEY="-----BEGIN\bOPENSSH\bPRIVATE\bKEY-----\n***\n-----END\bOPENSSH\bPRIVATE\bKEY-----"
 ```
+
+The variables needs to be blank string, replace new line with `\n`, replace backspace with `\b`
 
 ## vpc
 #### cidr

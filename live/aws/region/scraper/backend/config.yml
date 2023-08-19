@@ -1,0 +1,48 @@
+repository_name: scraper-backend
+
+vpc:
+  id: "vpc-0d5c1d5379f616e2f"
+  tier: "public"
+
+pricing_names: ["on-demand", "spot"]
+os: "linux"
+os_version: "2023"
+architecture: "x86_64"
+deployment_type: "ec2"
+ec2_instance_key: "t3_medium"
+# deployment_type      : "fargate"
+# fargate_instance_key : "cpu1024_mib2048"
+task_min_count: 0
+task_desired_count: 2
+task_max_count: 2
+
+iam:
+  scope: "accounts"
+  requires_mfa: false
+
+ecs:
+  traffics:
+    - listener:
+        protocol: "http"
+      target:
+        protocol: "http"
+  task_definition:
+    docker:
+      registry:
+        ecr:
+          privacy: "private"
+      repository:
+        name: "scraper-backend-${branch_name}"
+      image:
+        tag: latest
+
+bucket_env:
+  name: "env"
+  file_key: "${branch_name}.env"
+  force_destroy: false
+  versioning: true
+
+tags:
+  "Git Microservice": "github.com/dresspeng/scraper-backend@${branch_name}"
+  "Project": "scraper"
+  "Service": "backend"

@@ -1,0 +1,1 @@
+Manages the permissions of each user and creates github environments and repository variables necessary for some github actions

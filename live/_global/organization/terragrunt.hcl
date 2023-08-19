@@ -2,11 +2,13 @@ include {
   path = find_in_parent_folders()
 }
 
+# TODO: Create backup before doing any changes
+# TODO: plan before changes
+
 locals {
   convention_tmp_vars = read_terragrunt_config(find_in_parent_folders("convention_override.hcl"))
   convention_vars     = read_terragrunt_config(find_in_parent_folders("convention.hcl"))
   account_vars        = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
-  organization_vars   = read_terragrunt_config("${get_terragrunt_dir()}/organization.hcl")
 
   modules_branch_name = local.convention_tmp_vars.locals.modules_branch_name
 
@@ -16,6 +18,20 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
+  name_prefix                 = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
+  backend_bucket_name         = lower(join("-", compact([local.name_prefix, "tf-state"])))
+  backend_dynamodb_table_name = lower(join("-", compact([local.name_prefix, "tf-locks"])))
+
+  config = yamldecode(
+    templatefile(
+      "${get_terragrunt_dir()}/config.yml",
+      {
+        account_id                  = local.account_id
+        backend_dynamodb_table_name = local.backend_dynamodb_table_name
+        backend_bucket_name         = local.backend_bucket_name
+      }
+    )
+  )
 }
 
 terraform {
@@ -23,16 +39,16 @@ terraform {
 }
 
 inputs = {
-  name_prefix = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
+  name_prefix = local.name_prefix
   aws = merge(
-    local.organization_vars.locals.aws,
+    local.config.aws,
     {
       tags = merge(
         local.convention_tmp_vars.locals.tags,
         local.account_vars.locals.tags,
-        local.organization_vars.locals.aws.tags,
+        local.config.aws.tags,
       )
     }
   )
-  github = local.organization_vars.locals.github
+  github = local.config.github
 }

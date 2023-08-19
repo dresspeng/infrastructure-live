@@ -13,7 +13,6 @@ locals {
 
   tags = merge(
     local.convention_vars.locals.tags,
-    local.account_vars.locals.tags,
   )
 }
 
@@ -23,12 +22,6 @@ generate "versions" {
   if_exists = "overwrite_terragrunt"
   contents  = <<EOF
     terraform {
-      required_providers {
-        aws = {
-          source  = "hashicorp/aws"
-          version = "~> 5.5.0"
-        }
-      }
       required_version = ">= 1.4.0"
     }
   EOF
@@ -40,10 +33,6 @@ generate "provider" {
   path      = "provider_override.tf"
   if_exists = "overwrite_terragrunt"
   contents  = <<EOF
-    provider "aws" {
-      region = "${local.account_region_name}"
-      allowed_account_ids = ["${local.account_id}"]
-    }
     provider "github" {
       version = "~> 5.0"
       token = "${get_env("GITHUB_TOKEN")}"

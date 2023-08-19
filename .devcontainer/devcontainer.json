@@ -10,9 +10,9 @@
 	"mounts": [
 		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
 	],
-	"initializeCommand": "export $(grep -v '^#' .devcontainer/devcontainer.env | xargs) && make aws-auth && aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 401582117818.dkr.ecr.us-west-1.amazonaws.com",
+	"initializeCommand": "export $(grep -v '^#' .devcontainer/devcontainer.env | xargs -0) && make aws-auth && aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com",
 	"onCreateCommand": "go install github.com/cweill/gotests/gotests@latest && go install github.com/fatih/gomodifytags@latest && go install github.com/josharian/impl@latest && go install github.com/haya14busa/goplay/cmd/goplay@latest && go install github.com/go-delve/delve/cmd/dlv@latest && go install honnef.co/go/tools/cmd/staticcheck@latest && go install golang.org/x/tools/gopls@latest && go install -v golang.org/x/tools/cmd/goimports@latest && go install github.com/rogpeppe/godef@latest",
-	"postStartCommand": "export $(grep -v '^#' .devcontainer/devcontainer.env | xargs) && make aws-auth && tflint --init",
+	"postStartCommand": "export $(grep -v '^#' .devcontainer/devcontainer.env | xargs -0) && make aws-auth && tflint --init",
 	"features": {},
 	"customizations": {
 		"vscode": {
@@ -23,7 +23,8 @@
 				"bierner.markdown-emoji",
 				"ms-vscode.makefile-tools",
 				"github.vscode-github-actions",
-				"ms-azuretools.vscode-docker"
+				"ms-azuretools.vscode-docker",
+				"redhat.vscode-yaml"
 			]
 		}
 	}

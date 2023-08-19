@@ -1,0 +1,52 @@
+organization:
+  variables:
+    - key: DOMAIN_NAME
+      value: vistimi
+    - key: DOMAIN_SUFFIX
+      value: com
+    # - key: ECR_REGISTRY_PUBLIC_ALIAS
+    #   value: h4s7f1i8
+    - key: SSH_PUBLIC_KEY
+      value: ${SSH_PUBLIC_KEY}
+  secrets:
+    - key: GH_TERRA_TOKEN
+      value: ${GH_TERRA_TOKEN}
+    - key: SSH_PRIVATE_KEY
+      value: ${SSH_PRIVATE_KEY}
+
+repositories:
+  - accesses:
+      - owner: dresspeng
+        name: infrastructure-modules
+      - owner: dresspeng
+        name: infrastructure-live
+      - owner: dresspeng
+        name: scraper-backend
+      - owner: dresspeng
+        name: scraper-frontend
+    variables:
+      - key: CONTAINER_REGISTRY_PRIVACY
+        value: private
+    secrets:
+  - accesses:
+      - owner: dresspeng
+        name: infrastructure-modules
+      - owner: dresspeng
+        name: infrastructure-live
+    variables:
+      - key: CONTAINER_REGISTRY_ARGS
+        value:
+          '--arg repo_bin  "VARIANT=$(if [[ $ECR_PRIVACY == private ]]; then echo $ECR_REGISTRY_PRIVATE_URI; else echo $ECR_REGISTRY_PUBLIC_URI/$ECR_REGISTRY_PUBLIC_ALIAS; fi)/$(echo $REPOSITORY_NAME-$BRANCH_NAME | tr A-Z a-z)"
+          --arg repo_bin_1_4_4  "VARIANT=$(if [[ $ECR_PRIVACY == private ]]; then echo $ECR_REGISTRY_PRIVATE_URI; else echo $ECR_REGISTRY_PUBLIC_URI/$ECR_REGISTRY_PUBLIC_ALIAS; fi)/$(echo $REPOSITORY_NAME-$BRANCH_NAME | tr A-Z a-z):1.4.4"'
+      - key: CONTAINER_REGISTRY_JSON
+        value: '[{ "path":"Dockerfile.bin" }, { "path":"Dockerfile","args": [ $repo_bin ] }, { "path":"Dockerfile.bin","args": [ "TERRAFORM_VERSION=1.4.4","TERRAGRUNT_VERSION=0.45.0"], "tags":["1.4.4"]}, { "path":"Dockerfile","args": [ $repo_bin_1_4_4 ], "tags":["1.4.4"] }, { "path":"Dockerfile.bin","args": [ "VARIANT=mcr.microsoft.com/devcontainers/base:alpine-3.16" ], "extension": "devcontainer" } ]'
+    secrets:
+  - accesses:
+      - owner: dresspeng
+        name: scraper-backend
+      - owner: dresspeng
+        name: scraper-frontend
+    variables:
+      - key: CONTAINER_REGISTRY_JSON
+        value: '[{ "path": "Dockerfile" }]'
+    secrets:

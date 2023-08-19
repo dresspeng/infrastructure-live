@@ -17,7 +17,9 @@ locals {
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
-  name_prefix = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
+  name_prefix                 = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
+  backend_bucket_name         = lower(join("-", compact([local.name_prefix, local.repository_name, local.account_name, local.branch_name, "tf-state"])))
+  backend_dynamodb_table_name = lower(join("-", compact([local.name_prefix, local.repository_name, local.account_name, local.branch_name, "tf-locks"])))
 
   tags = merge(
     local.convention_vars.locals.tags,
@@ -62,8 +64,8 @@ remote_state {
     encrypt             = true
     key                 = "${path_relative_to_include()}/terraform.tfstate"
     region              = local.account_region_name
-    bucket              = lower(join("-", compact([local.name_prefix, local.repository_name, local.account_name, local.branch_name, "tf-state"])))
-    dynamodb_table      = lower(join("-", compact([local.name_prefix, local.repository_name, local.account_name, local.branch_name, "tf-locks"])))
+    bucket              = local.backend_bucket_name
+    dynamodb_table      = local.backend_dynamodb_table_name
     s3_bucket_tags      = local.tags
     dynamodb_table_tags = local.tags
   }
