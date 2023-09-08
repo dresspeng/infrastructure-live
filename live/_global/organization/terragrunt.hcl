@@ -19,8 +19,8 @@ locals {
   account_id          = local.account_vars.locals.account_id
 
   name_prefix                 = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
-  backend_bucket_name         = lower(join("-", compact([local.name_prefix, "tf-state"])))
-  backend_dynamodb_table_name = lower(join("-", compact([local.name_prefix, "tf-locks"])))
+  backend_bucket_name         = lower(join("-", compact([local.name_prefix, local.account_region_name, "tf-state"])))
+  backend_dynamodb_table_name = lower(join("-", compact([local.name_prefix, local.account_region_name, "tf-locks"])))
 
   config = yamldecode(
     templatefile(

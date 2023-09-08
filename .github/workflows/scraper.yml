@@ -308,8 +308,9 @@ jobs:
           make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
           if [[ ${{ inputs.labelstudio-running }} == false ]]; then
+            # TODO: snapshot of db
             terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.labelstudio
-          else            
+          else
             make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
             DNS_URL=$(terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json labelstudio | jq '.load_balancer_host')

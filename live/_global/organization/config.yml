@@ -12,7 +12,7 @@ aws:
         - name: "perm"
           statements:
             - sid: "IAMAll"
-              actions: ["iam:*"]
+              actions: ["iam:*", "ec2:*"]
               effect: "Allow"
               resources: ["*"]
             - sid: "SecretmanagerAll"
