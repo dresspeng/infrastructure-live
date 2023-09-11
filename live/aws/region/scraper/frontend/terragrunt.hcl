@@ -7,7 +7,6 @@ locals {
   convention_vars     = read_terragrunt_config(find_in_parent_folders("convention.hcl"))
   account_vars        = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
   microservice_vars   = read_terragrunt_config(find_in_parent_folders("microservice.hcl"))
-  service_vars        = read_terragrunt_config("${get_terragrunt_dir()}/service.hcl")
   service_tmp_vars    = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
 
   override_extension_name       = local.convention_tmp_vars.locals.override_extension_name
@@ -26,85 +25,33 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  vpc                = local.service_vars.locals.vpc
-  project_name       = local.service_vars.locals.project_name
-  service_name       = local.service_vars.locals.service_name
-  repository_name    = local.service_vars.locals.repository_name
-  pricing_names      = local.service_vars.locals.pricing_names
-  deployment_type    = local.service_vars.locals.deployment_type
-  os                 = local.service_vars.locals.os
-  os_version         = local.service_vars.locals.os_version
-  architecture       = local.service_vars.locals.architecture
-  task_min_count     = local.service_vars.locals.task_min_count
-  task_desired_count = local.service_vars.locals.task_desired_count
-  task_max_count     = local.service_vars.locals.task_max_count
-  iam                = local.service_vars.locals.iam
-
   branch_name = local.service_tmp_vars.locals.branch_name
 
-  config_vars = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
-
-  name = lower(join("-", [local.account_name, local.branch_name]))
-
-  pricing_name_spot      = local.microservice_vars.locals.pricing_name_spot
-  pricing_name_on_demand = local.microservice_vars.locals.pricing_name_on_demand
-  ec2_microservice       = local.microservice_vars.locals.ec2
-  ec2 = { for pricing_name in local.pricing_names :
-    pricing_name => merge(
-      local.ec2_microservice[pricing_name],
+  config_override = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
+  config = yamldecode(
+    templatefile(
+      "${get_terragrunt_dir()}/config.yml",
       {
-        os           = local.service_vars.locals.os
-        os_version   = local.service_vars.locals.os_version
-        architecture = local.service_vars.locals.architecture
-      },
-      {
-        instance_type = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].name
+        vpc_id      = get_env("VPC_ID")
+        branch_name = local.branch_name
+        port        = local.config_override.port
       }
     )
-    if local.deployment_type == "ec2"
-  }
-
-
-  fargate_microservice = local.microservice_vars.locals.fargate
-  fargate = merge(
-    local.fargate_microservice,
-    {
-      os = local.service_vars.locals.os
-      # os_version   = local.service_vars.locals.os_version
-      architecture = local.service_vars.locals.architecture
-    },
-    {
-      capacity_provider = { for pricing_name in local.pricing_names :
-        pricing_name => local.fargate_microservice.capacity_provider[pricing_name]
-        if local.deployment_type == "fargate"
-      }
-  })
-
-  task_definition = local.deployment_type == "fargate" ? {
-    cpu                = local.microservice_vars.locals.fargate_instances[local.service_vars.locals.fargate_instance_key].cpu
-    memory             = local.microservice_vars.locals.fargate_instances[local.service_vars.locals.fargate_instance_key].memory
-    memory_reservation = null
-    } : local.deployment_type == "ec2" ? {
-    cpu                = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].cpu
-    memory             = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].memory_allowed - local.microservice_vars.locals.ecs_reserved_memory
-    memory_reservation = local.microservice_vars.locals.ec2_instances[local.service_vars.locals.ec2_instance_key].memory_allowed - local.microservice_vars.locals.ecs_reserved_memory
-  } : null
-
-  env_local_path = "${get_terragrunt_dir()}/${local.override_extension_name}.env"
+  )
 }
 
 terraform {
-  source = "${local.modules_git_prefix}//projects/module/aws/microservice/${local.repository_name}?ref=${local.modules_branch_name}"
+  source = "${local.modules_git_prefix}//projects/module/aws/projects/scraper/frontend?ref=${local.modules_branch_name}"
 }
 
 inputs = {
-  name_prefix = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
-  name_suffix = local.name
+  name_prefix = lower(substr(local.convention_tmp_vars.locals.organization_name, 0, 2))
+  name_suffix = lower(join("-", [local.account_name, local.account_region_name, local.branch_name]))
 
-  vpc = local.vpc
+  vpc = local.config.vpc
 
   microservice = {
-    iam = local.iam
+    iam = local.config.iam
 
     route53 = {
       zones = [
@@ -113,59 +60,37 @@ inputs = {
         }
       ]
       record = {
-        extensions     = ["www"]
-        subdomain_name = format("%s%s", local.branch_name == "trunk" ? "" : "${local.branch_name}.", local.repository_name)
+        prefixes       = ["www"]
+        subdomain_name = format("%s%s", local.branch_name == "trunk" ? "" : "${local.branch_name}.", local.config.repository_name)
       }
     }
 
     bucket_env = merge(
-      local.service_vars.locals.bucket_env,
+      local.config.bucket_env,
       {
-        file_path = local.env_local_path
+        file_path = "${get_terragrunt_dir()}/${local.override_extension_name}.env"
       }
     )
 
-    ecs = merge(local.microservice_vars.locals.ecs, {
-      traffics = [
-        for traffic in local.service_vars.locals.ecs.traffics : {
-          listener = {
-            port     = try(traffic.listener.port, null)
-            protocol = traffic.listener.protocol
-          },
-          target = {
-            port              = try(traffic.listener.port, local.config_vars.port)
-            protocol          = traffic.target.protocol
-            health_check_path = local.config_vars.healthCheckPath
-          }
+    traffics = [
+      for traffic in local.config.microservice.container.traffics : {
+        listener = {
+          port     = try(traffic.listener.port, null)
+          protocol = traffic.listener.protocol
+        },
+        target = {
+          port              = try(traffic.listener.port, local.config_override.port)
+          protocol          = traffic.target.protocol
+          health_check_path = local.config_override.healthCheckPath
         }
-      ]
-      service = merge(
-        local.microservice_vars.locals.ecs.service,
-        {
-          deployment_type    = local.deployment_type
-          task_min_count     = local.task_min_count
-          task_desired_count = local.task_desired_count
-          task_max_count     = local.task_max_count
-          deployment_circuit_breaker = local.deployment_type == "ec2" ? {
-            enable   = true
-            rollback = true
-          } : null
-        }
-      )
-      task_definition = merge(
-        local.microservice_vars.locals.ecs.task_definition,
-        local.task_definition,
-        local.service_vars.locals.ecs.task_definition,
-      )
-      ec2     = local.ec2
-      fargate = local.fargate
       }
-    )
+    ]
+    container = local.config.microservice.container
   }
 
   tags = merge(
     local.convention_tmp_vars.locals.tags,
     local.account_vars.locals.tags,
-    local.service_vars.locals.tags,
+    local.config.tags,
   )
 }

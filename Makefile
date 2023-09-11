@@ -155,6 +155,25 @@ prepare-microservice:
 			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
 	fi
 
+prepare-scraper-labelstudio:
+	$(call check_defined, OVERRIDE_EXTENSION, GITHUB_TOKEN, TERRAGRUNT_CONFIG_PATH, ORGANIZATION_NAME, REPOSITORY_NAME, BRANCH_NAME, DEFAULT_BRANCH_NAME)
+	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
+	$(eval branches=$(shell make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
+	if [[ '$(shell echo ${branches} | grep -o "${BRANCH_NAME}" | wc -l)' == '0' ]]; then
+		$(eval BRANCH_NAME_MICROSERVICE=${DEFAULT_BRANCH_NAME})
+		echo -e '\033[43mWarning\033[0m' ::: BRANCH_NAME ${BRANCH_NAME} not found, using ${DEFAULT_BRANCH_NAME}
+		make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice-config-file \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
+	else
+		$(eval BRANCH_NAME_MICROSERVICE=${BRANCH_NAME})
+		make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice-config-file \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
+	fi
+
 prepare-scraper-backend:
 	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend)
 	$(eval ORGANIZATION_NAME=dresspeng)

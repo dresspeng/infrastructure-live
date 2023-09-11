@@ -1,4 +1,4 @@
-repository_name: scraper-backend
+repository_name: scraper-frontend
 
 vpc:
   id: ${vpc_id}
@@ -30,7 +30,7 @@ microservice:
               ecr:
                 privacy: "private"
             repository:
-              name: "scraper-backend-${branch_name}"
+              name: "scraper-frontend-${branch_name}"
             image:
               tag: latest
           readonly_root_filesystem: true
@@ -49,6 +49,6 @@ bucket_env:
   versioning: true
 
 tags:
-  "Git Microservice": "github.com/dresspeng/scraper-backend@${branch_name}"
+  "Git Microservice": "github.com/dresspeng/scraper-frontend@${branch_name}"
   "Project": "scraper"
-  "Service": "backend"
+  "Service": "frontend"

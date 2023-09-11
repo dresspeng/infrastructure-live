@@ -1,10 +1,6 @@
 locals {
   # const
-  ecs_reserved_memory = 100
-
-  # purchasing options
-  pricing_name_spot      = "spot"
-  pricing_name_on_demand = "on-demand"
+  ecs_reserved_memory = 30
 
   # ec2 const
   ec2_instances = {
@@ -33,70 +29,6 @@ locals {
     cpu1024_mib2048 = {
       cpu    = 1024
       memory = 2048
-    }
-  }
-
-  # EC2
-  ec2_asg = {
-    instance_refresh = {
-      strategy = "Rolling"
-      preferences = {
-        checkpoint_delay       = 600
-        checkpoint_percentages = [35, 70, 100]
-        instance_warmup        = 300
-        min_healthy_percentage = 80
-      }
-      triggers = ["tag"]
-    }
-  }
-  ec2_capacity_provider = {
-    base                        = null # no preferred instance amount
-    weight                      = 50   # 50% chance
-    target_capacity_cpu_percent = 70
-    maximum_scaling_step_size   = 1
-    minimum_scaling_step_size   = 1
-  }
-  # ECS_CLUSTER
-  ec2 = {
-    "${local.pricing_name_spot}" = {
-      key_name          = null
-      use_spot          = true
-      asg               = local.ec2_asg
-      capacity_provider = local.ec2_capacity_provider
-    }
-    "${local.pricing_name_on_demand}" = {
-      key_name          = null
-      use_spot          = false
-      asg               = local.ec2_asg
-      capacity_provider = local.ec2_capacity_provider
-    }
-  }
-
-  # FARGATE
-  fargate = {
-    capacity_provider = {
-      "${local.pricing_name_spot}" = {
-        key    = "FARGATE_SPOT"
-        base   = null # no preferred instance amount
-        weight = 50   # 50% chance        
-      }
-      "${local.pricing_name_on_demand}" = {
-        key    = "FARGATE"
-        base   = null # no preferred instance amount
-        weight = 50   # 50% chance        
-      }
-    }
-  }
-
-  # ECS
-  ecs = {
-    log = {
-      retention_days = 30
-      prefix         = "ecs"
-    }
-    task_definition = {}
-    service = {
-      deployment_minimum_healthy_percent = 66
     }
   }
 }

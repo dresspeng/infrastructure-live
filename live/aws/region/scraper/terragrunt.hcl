@@ -2,29 +2,34 @@ locals {
   convention_tmp_vars = read_terragrunt_config(find_in_parent_folders("convention_override.hcl"))
   convention_vars     = read_terragrunt_config(find_in_parent_folders("convention_override.hcl"))
   account_vars        = read_terragrunt_config(find_in_parent_folders("account_override.hcl"))
-  service_vars        = read_terragrunt_config("${get_terragrunt_dir()}/service.hcl")
   service_tmp_vars    = read_terragrunt_config("${get_terragrunt_dir()}/service_override.hcl")
 
   account_region_name = local.account_vars.locals.account_region_name
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
-  project_name      = local.service_vars.locals.project_name
-  service_name      = local.service_vars.locals.service_name
-  git_host_name     = local.service_vars.locals.git_host_name
-  organization_name = local.service_vars.locals.organization_name
-  repository_name   = local.service_vars.locals.repository_name
-
   branch_name = local.service_tmp_vars.locals.branch_name
 
-  name_prefix                 = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
-  backend_bucket_name         = lower(join("-", compact([local.name_prefix, local.account_name, local.account_region_name, local.repository_name, local.branch_name, "tf-state"])))
-  backend_dynamodb_table_name = lower(join("-", compact([local.name_prefix, local.account_name, local.account_region_name, local.repository_name, local.branch_name, "tf-locks"])))
+  config_override = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
+  config = yamldecode(
+    templatefile(
+      "${get_terragrunt_dir()}/config.yml",
+      {
+        vpc_id      = ""
+        branch_name = ""
+        port        = 0
+      }
+    )
+  )
+
+  name_prefix                 = lower(substr(local.convention_tmp_vars.locals.organization_name, 0, 2))
+  backend_bucket_name         = lower(join("-", compact([local.name_prefix, local.account_name, local.account_region_name, local.config.repository_name, local.branch_name, "tf-state"])))
+  backend_dynamodb_table_name = lower(join("-", compact([local.name_prefix, local.account_name, local.account_region_name, local.config.repository_name, local.branch_name, "tf-locks"])))
 
   tags = merge(
     local.convention_vars.locals.tags,
     local.account_vars.locals.tags,
-    local.service_vars.locals.tags,
+    local.config.tags,
   )
 }
 
