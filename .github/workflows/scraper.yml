@@ -5,10 +5,10 @@ on:
     inputs:
       environment-machine:
         type: environment
-        description: "The deployment environment"
+        description: The deployment environment
         required: true
       backend:
-        description: "Backend"
+        description: Backend
         type: choice
         required: true
         options: 
@@ -17,7 +17,7 @@ on:
           - destroy
         default: skip
       frontend:
-        description: "Frontend"
+        description: Frontend
         type: choice
         required: true
         options: 
@@ -26,7 +26,7 @@ on:
           - destroy
         default: skip
       labelstudio:
-        description: "Labelstudio"
+        description: Labelstudio
         type: choice
         required: true
         options: 
@@ -99,12 +99,14 @@ jobs:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
       VPC_ID: ${{ vars.VPC_ID }}
+      TERRAGRUNT_CONFIG_PATH: live/aws/region/scraper/backend
     outputs:
       DNS_URL: ${{ steps.apply.outputs.DNS_URL }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Versions
         run: |
           terraform --version
@@ -125,7 +127,6 @@ jobs:
       #     cat ~/.ssh/known_hosts
 
       - name: Setup AWS CLI
-        id: setup
         run: |
           make aws-auth
 
@@ -134,7 +135,6 @@ jobs:
           make -f Makefile_infra gh-auth-check
 
       - name: Terragrunt prepare
-        id: prepare
         run: |
           make prepare-terragrunt \
             DOMAIN_NAME=${{ vars.DOMAIN_NAME }}  \
@@ -142,11 +142,6 @@ jobs:
             AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
             AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }}  \
             AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
-
-      - name: Terragrunt init & apply
-        id: apply
-        run: |
-          TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend
 
           make prepare-scraper-backend \
             GITHUB_TOKEN=${{ secrets.GH_TERRA_TOKEN}} \
@@ -161,25 +156,32 @@ jobs:
             AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
             AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
 
+      - name: Terragrunt init
+        run: |
           make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
+
+      - name: Terragrunt plan
+        run: |
           make -f Makefile_infra plan TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-          if [[ ${{ inputs.backend }} == destroy ]]; then
-            make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
-          if [[ ${{ inputs.backend }} == run ]]; then   
-            make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
+      - name: Terragrunt apply
+        if: ${{ inputs.backend }} == run
+        id: apply
+        run: |
+          make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-            DNS_URL=$(make -f Makefile_infra output-microservice-ecs TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
-            if [[ -z ${DNS_URL} ]] || [[ ${DNS_URL} = null ]]; then
-              echo -e '\033[41mDNS_URL\033[0m' ::: ${DNS_URL}
-              exit 42
-            fi
-            echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}
-            echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
-          else
-            echo -e '\033[41mNo choice available for:\033[0m' ${{ inputs.backend }}
+          DNS_URL=$(make -f Makefile_infra output-microservice-ecs TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
+          if [[ -z ${DNS_URL} ]] || [[ ${DNS_URL} = null ]]; then
+            echo -e '\033[41mDNS_URL\033[0m' ::: ${DNS_URL}
             exit 42
           fi
+          echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}
+          echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
+
+      - name: Terragrunt destroy
+        if: ${{ inputs.backend }} == destroy
+        run: |
+          make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
   frontend:
     needs: [setup, backend]
@@ -201,12 +203,14 @@ jobs:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
       VPC_ID: ${{ vars.VPC_ID }}
+      TERRAGRUNT_CONFIG_PATH: live/aws/region/scraper/frontend
     outputs:
       DNS_URL: ${{ steps.apply.outputs.DNS_URL }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Versions
         run: |
           terraform --version
@@ -227,7 +231,6 @@ jobs:
       #     cat ~/.ssh/known_hosts
 
       - name: Setup AWS CLI
-        id: setup
         run: |
           make aws-auth
 
@@ -236,7 +239,6 @@ jobs:
           make -f Makefile_infra gh-auth-check
 
       - name: Terragrunt prepare
-        id: prepare
         run: |
           make prepare-terragrunt \
             DOMAIN_NAME=$DOMAIN_NAME  \
@@ -244,38 +246,39 @@ jobs:
             AWS_REGION_NAME=$AWS_REGION_NAME \
             AWS_PROFILE_NAME=$AWS_PROFILE_NAME  \
             AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
-
-      - name: Terragrunt init & apply
-        id: apply
-        run: |
-          export TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend
-
+          
           make prepare-scraper-frontend \
             GITHUB_TOKEN=${{ secrets.GH_TERRA_TOKEN}} \
             TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
             BRANCH_NAME=${{ github.head_ref || github.ref_name }}  \
             NEXT_PUBLIC_API_URL=${{ needs.backend.outputs.DNS_URL}}
 
+      - name: Terragrunt init
+        run: |
           make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
+
+      - name: Terragrunt plan
+        run: |
           make -f Makefile_infra plan TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-          if [[ ${{ inputs.frontend }} == destroy ]]; then
-            make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
-            terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.microservice
-          if [[ ${{ inputs.frontend }} == run ]]; then
-            make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
+      - name: Terragrunt apply
+        if: ${{ inputs.frontend }} == run
+        id: apply
+        run: |
+          make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-            DNS_URL=$(make -f Makefile_infra output-microservice-ecs TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
-            if [[ -z ${DNS_URL} ]]; then
-              echo -e '\033[41mDNS_URL\033[0m' missing
-              exit 42
-            fi
-            echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}
-            echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
-          else
-            echo -e '\033[41mNo choice available for:\033[0m' ${{ inputs.frontend }}
+          DNS_URL=$(make -f Makefile_infra output-microservice-ecs TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
+          if [[ -z ${DNS_URL} ]] || [[ ${DNS_URL} = null ]]; then
+            echo -e '\033[41mDNS_URL\033[0m' ::: ${DNS_URL}
             exit 42
           fi
+          echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}
+          echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
+
+      - name: Terragrunt destroy
+        if: ${{ inputs.frontend }} == destroy
+        run: |
+          make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
   labelstudio:
     needs: [setup]
@@ -297,12 +300,14 @@ jobs:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
       VPC_ID: ${{ vars.VPC_ID }}
+      TERRAGRUNT_CONFIG_PATH: live/aws/region/scraper/labelstudio
     outputs:
       DNS_URL: ${{ steps.apply.outputs.DNS_URL }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Versions
         run: |
           terraform --version
@@ -323,12 +328,10 @@ jobs:
       #     cat ~/.ssh/known_hosts
 
       - name: Setup AWS CLI
-        id: setup
         run: |
           make aws-auth
 
       - name: Terragrunt prepare
-        id: prepare
         run: |
           make prepare-terragrunt \
             DOMAIN_NAME=$DOMAIN_NAME  \
@@ -337,28 +340,29 @@ jobs:
             AWS_PROFILE_NAME=$AWS_PROFILE_NAME  \
             AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
 
-      - name: Terragrunt init & apply
-        id: apply
+      - name: Terragrunt init
         run: |
-          TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/labelstudio
-
           make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
+
+      - name: Terragrunt plan
+        run: |
           make -f Makefile_infra plan TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-          if [[ ${{ inputs.labelstudio }} == destroy ]]; then
-            # TODO: snapshot of db
-            terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.labelstudio
-          if [[ ${{ inputs.labelstudio }} == run ]]; then
-            make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
+      - name: Terragrunt apply
+        if: ${{ inputs.labelstudio }} == run
+        id: apply
+        run: |
+          make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-            DNS_URL=$(terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json labelstudio | jq '.load_balancer_host')
-            if [[ -z ${DNS_URL} ]]; then
-              echo -e '\033[41mDNS_URL\033[0m' ::: ${DNS_URL}
-              exit 42
-            fi
-            echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}
-            echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
-          else
-            echo -e '\033[41mNo choice available for:\033[0m' ${{ inputs.labelstudio }}
+          DNS_URL=$(terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json labelstudio | jq '.load_balancer_host')
+          if [[ -z ${DNS_URL} ]] || [[ ${DNS_URL} = null ]]; then
+            echo -e '\033[41mDNS_URL\033[0m' ::: ${DNS_URL}
             exit 42
           fi
+          echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}
+          echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
+
+      - name: Terragrunt destroy
+        if: ${{ inputs.labelstudio }} == destroy
+        run: |
+          terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.labelstudio
