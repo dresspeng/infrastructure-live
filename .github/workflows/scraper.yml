@@ -55,11 +55,6 @@ jobs:
       ECR_REPOSITORY_EXTENSION: ${{ steps.get-output.outputs.ECR_REPOSITORY_EXTENSION }}
 
     steps:
-      - name: Inputs
-        run: |
-          echo backend: ${{ inputs.backend }}
-          echo frontend: ${{ inputs.frontend }}
-          echo labelstudio: ${{ inputs.labelstudio }}
 
       - name: setup AWS CLI
         run: |
@@ -115,7 +110,6 @@ jobs:
 
       - name: Versions
         run: |
-          echo ${{( inputs.backend == 'run' ) || ( inputs.backend == 'destroy'  )}} 
           terraform --version
           terragrunt --version
 
@@ -220,7 +214,6 @@ jobs:
 
       - name: Versions
         run: |
-          echo ${{ ( inputs.backend == 'run' &&  inputs.frontend == 'run' &&  contains(join(needs.*.result, ','), 'success')  ) ||  ( inputs.frontend  == 'destroy' ) }}
           terraform --version
           terragrunt --version
 
@@ -318,7 +311,6 @@ jobs:
 
       - name: Versions
         run: |
-          echo ${{ inputs.labelstudio == 'run' || inputs.labelstudio == 'destroy'  }}
           terraform --version
           terragrunt --version
 
