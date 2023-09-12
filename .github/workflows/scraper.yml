@@ -7,21 +7,33 @@ on:
         type: environment
         description: "The deployment environment"
         required: true
-      backend-running:
-        type: boolean
-        description: "Backend: Up and running"
+      backend:
+        description: "Backend"
+        type: choice
         required: true
-        default: true
-      frontend-running:
-        type: boolean
-        description: "Frontend: Up and running"
+        options: 
+          - skip
+          - run
+          - destroy
+        default: skip
+      frontend:
+        description: "Frontend"
+        type: choice
         required: true
-        default: true
-      labelstudio-running:
-        type: boolean
-        description: "Labelstudio: Up and running"
+        options: 
+          - skip
+          - run
+          - destroy
+        default: skip
+      labelstudio:
+        description: "Labelstudio"
+        type: choice
         required: true
-        default: true
+        options: 
+          - skip
+          - run
+          - destroy
+        default: skip
 
 env:
   ECR_PRIVACY: ${{ vars.CONTAINER_REGISTRY_PRIVACY }}
@@ -69,7 +81,7 @@ jobs:
 
   backend:
     needs: [setup]
-    # if: ${{ inputs.backend-running }} || ${{ !inputs.backend-running }}
+    if: ${{ inputs.backend }} != "skip"
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
@@ -152,9 +164,9 @@ jobs:
           make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
           make -f Makefile_infra plan TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-          if [[ ${{ inputs.backend-running }} == false ]]; then
+          if [[ ${{ inputs.backend }} == destroy ]]; then
             make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
-          else   
+          if [[ ${{ inputs.backend }} == run ]]; then   
             make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
             DNS_URL=$(make -f Makefile_infra output-microservice-ecs TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
@@ -164,11 +176,14 @@ jobs:
             fi
             echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}
             echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
+          else
+            echo -e '\033[41mNo choice available for:\033[0m' ${{ inputs.backend }}
+            exit 42
           fi
 
   frontend:
     needs: [setup, backend]
-    if: ${{ inputs.backend-running }} && ${{ inputs.frontend-running }} && ${{ contains(join(needs.*.result, ','), 'success') }} || ${{ !inputs.frontend-running }}
+    if: ${{ inputs.backend }} == "run" && ${{ inputs.frontend }}== "run" && ${{ contains(join(needs.*.result, ','), 'success') }} || ${{ inputs.frontend }} == "destroy"
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
@@ -244,10 +259,10 @@ jobs:
           make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
           make -f Makefile_infra plan TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-          if [[ ${{ inputs.frontend-running }} == false ]]; then
+          if [[ ${{ inputs.frontend }} == destroy ]]; then
             make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
             terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.microservice
-          else
+          if [[ ${{ inputs.frontend }} == run ]]; then
             make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
             DNS_URL=$(make -f Makefile_infra output-microservice-ecs TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
@@ -257,11 +272,14 @@ jobs:
             fi
             echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}
             echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
+          else
+            echo -e '\033[41mNo choice available for:\033[0m' ${{ inputs.frontend }}
+            exit 42
           fi
 
   labelstudio:
     needs: [setup]
-    # if: ${{ inputs.labelstudio-running }}
+    if: ${{ inputs.labelstudio }} != "skip"
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container:
@@ -327,10 +345,10 @@ jobs:
           make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
           make -f Makefile_infra plan TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-          if [[ ${{ inputs.labelstudio-running }} == false ]]; then
+          if [[ ${{ inputs.labelstudio }} == destroy ]]; then
             # TODO: snapshot of db
             terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.labelstudio
-          else
+          if [[ ${{ inputs.labelstudio }} == run ]]; then
             make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
             DNS_URL=$(terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json labelstudio | jq '.load_balancer_host')
@@ -340,4 +358,7 @@ jobs:
             fi
             echo -e '\033[44mDNS_URL\033[0m' ::: ${DNS_URL}
             echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
+          else
+            echo -e '\033[41mNo choice available for:\033[0m' ${{ inputs.labelstudio }}
+            exit 42
           fi
