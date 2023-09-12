@@ -154,11 +154,11 @@ jobs:
 
           if [[ ${{ inputs.backend-running }} == false ]]; then
             make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
-          else            
+          else   
             make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-            DNS_URL=$(make -f Makefile_infra output-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
-            if [[ -z ${DNS_URL} ]]; then
+            DNS_URL=$(make -f Makefile_infra output-microservice-ecs TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
+            if [[ -z ${DNS_URL} ]] || [[ ${DNS_URL} = null ]]; then
               echo -e '\033[41mDNS_URL\033[0m' ::: ${DNS_URL}
               exit 42
             fi
@@ -250,7 +250,7 @@ jobs:
           else
             make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
-            DNS_URL=$(make -f Makefile_infra output-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
+            DNS_URL=$(make -f Makefile_infra output-microservice-ecs TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH})
             if [[ -z ${DNS_URL} ]]; then
               echo -e '\033[41mDNS_URL\033[0m' missing
               exit 42
