@@ -47,9 +47,9 @@ apply:
 destroy-microservice:
 	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
 	terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.microservice
-output-microservice:
+output-microservice-ecs:
 	$(call check_defined, TERRAGRUNT_CONFIG_PATH)
-	terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json microservice | jq '.ecs.elb.lb_dns_name'
+	terragrunt output --terragrunt-non-interactive --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -json microservice | jq '.ecs.elb.lb.dns_name'
 
 
 clean-cloudwatch:
