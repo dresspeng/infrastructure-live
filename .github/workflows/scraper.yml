@@ -55,6 +55,12 @@ jobs:
       ECR_REPOSITORY_EXTENSION: ${{ steps.get-output.outputs.ECR_REPOSITORY_EXTENSION }}
 
     steps:
+      - name: Inputs
+        run: |
+          echo backend: ${{ inputs.backend }}
+          echo frontend: ${{ inputs.frontend }}
+          echo labelstudio: ${{ inputs.labelstudio }}
+
       - name: setup AWS CLI
         run: |
           aws --version
@@ -81,7 +87,7 @@ jobs:
 
   backend:
     needs: [setup]
-    if: ${{ inputs.backend }} != skip
+    if: ${{ inputs.backend }} == run || ${{ inputs.backend }} == destroy
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
@@ -282,7 +288,7 @@ jobs:
 
   labelstudio:
     needs: [setup]
-    if: ${{ inputs.labelstudio }} != skip
+    if: ${{ inputs.labelstudio }} == run || ${{ inputs.labelstudio }} == destroy
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container:
