@@ -46,11 +46,7 @@ terraform {
 
 inputs = {
   name_prefix = lower(substr(local.convention_tmp_vars.locals.organization_name, 0, 2))
-  name_suffix = lower(join("-", [
-    local.account_name,
-    joine("-", [for str in split("-", local.account_region_name) : substr(str, 0, 1)]),
-    local.branch_name
-  ]))
+  name_suffix = lower(join("-", [local.account_name, join("-", [for str in split("-", local.account_region_name) : substr(str, 0, 1)]), local.branch_name]))
 
   vpc = local.config.vpc
 
