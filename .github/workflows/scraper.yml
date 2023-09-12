@@ -69,7 +69,7 @@ jobs:
 
   backend:
     needs: [setup]
-    if: ${{ inputs.backend-running }}
+    # if: ${{ inputs.backend-running }} || ${{ !inputs.backend-running }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
@@ -168,7 +168,7 @@ jobs:
 
   frontend:
     needs: [setup, backend]
-    if: ${{ inputs.backend-running }} && ${{ inputs.frontend-running }} && ${{ contains(join(needs.*.result, ','), 'success') }}
+    if: ${{ inputs.backend-running }} && ${{ inputs.frontend-running }} && ${{ contains(join(needs.*.result, ','), 'success') }} || ${{ !inputs.frontend-running }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
@@ -261,7 +261,7 @@ jobs:
 
   labelstudio:
     needs: [setup]
-    if: ${{ inputs.labelstudio-running }}
+    # if: ${{ inputs.labelstudio-running }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container:
