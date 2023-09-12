@@ -85,7 +85,8 @@ jobs:
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }} 
+      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
+      VPC_ID: ${{ vars.VPC_ID }}
     outputs:
       DNS_URL: ${{ steps.apply.outputs.DNS_URL }}
 
@@ -183,7 +184,8 @@ jobs:
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }} 
+      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
+      VPC_ID: ${{ vars.VPC_ID }}
     outputs:
       DNS_URL: ${{ steps.apply.outputs.DNS_URL }}
 
@@ -276,6 +278,7 @@ jobs:
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
+      VPC_ID: ${{ vars.VPC_ID }}
     outputs:
       DNS_URL: ${{ steps.apply.outputs.DNS_URL }}
 

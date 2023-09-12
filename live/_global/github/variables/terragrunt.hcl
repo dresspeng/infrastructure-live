@@ -13,6 +13,7 @@ locals {
         SSH_PUBLIC_KEY  = get_env("SSH_PUBLIC_KEY")
         GH_TERRA_TOKEN  = get_env("GITHUB_TOKEN")
         SSH_PRIVATE_KEY = get_env("SSH_PRIVATE_KEY")
+        VPC_ID          = get_env("VPC_ID")
       }
     )
   )
