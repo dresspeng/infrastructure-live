@@ -115,6 +115,7 @@ jobs:
 
       - name: Versions
         run: |
+          echo ${{ inputs.backend }} == 'run' || ${{ inputs.backend }} == 'destroy'
           terraform --version
           terragrunt --version
 
@@ -316,6 +317,7 @@ jobs:
 
       - name: Versions
         run: |
+          echo ${{ inputs.labelstudio }} == 'run' || ${{ inputs.labelstudio }} == 'destroy'
           terraform --version
           terragrunt --version
 
