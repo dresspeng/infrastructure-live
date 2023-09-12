@@ -87,7 +87,7 @@ jobs:
 
   backend:
     needs: [setup]
-    if: ${{ inputs.backend }} == run || ${{ inputs.backend }} == destroy
+    if: ${{ inputs.backend }} == 'run' || ${{ inputs.backend }} == 'destroy'
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
@@ -171,7 +171,7 @@ jobs:
           make -f Makefile_infra plan TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
       - name: Terragrunt apply
-        if: ${{ inputs.backend }} == run
+        if: ${{ inputs.backend }} == 'run'
         id: apply
         run: |
           make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
@@ -185,13 +185,13 @@ jobs:
           echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
 
       - name: Terragrunt destroy
-        if: ${{ inputs.backend }} == destroy
+        if: ${{ inputs.backend }} == 'destroy'
         run: |
           make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
   frontend:
     needs: [setup, backend]
-    if: ${{ inputs.backend }} == run && ${{ inputs.frontend }} == run && ${{ contains(join(needs.*.result, ','), 'success') }} || ${{ inputs.frontend }} == destroy
+    if: ${{ inputs.backend }} == 'run' && ${{ inputs.frontend }} == 'run' && ${{ contains(join(needs.*.result, ','), 'success') }} || ${{ inputs.frontend }} == 'destroy'
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container: 
@@ -268,7 +268,7 @@ jobs:
           make -f Makefile_infra plan TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
       - name: Terragrunt apply
-        if: ${{ inputs.frontend }} == run
+        if: ${{ inputs.frontend }} == 'run'
         id: apply
         run: |
           make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
@@ -282,13 +282,13 @@ jobs:
           echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
 
       - name: Terragrunt destroy
-        if: ${{ inputs.frontend }} == destroy
+        if: ${{ inputs.frontend }} == 'destroy'
         run: |
           make -f Makefile_infra destroy-microservice TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
   labelstudio:
     needs: [setup]
-    if: ${{ inputs.labelstudio }} == run || ${{ inputs.labelstudio }} == destroy
+    if: ${{ inputs.labelstudio }} == 'run' || ${{ inputs.labelstudio }} == 'destroy'
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment-machine }}
     container:
@@ -355,7 +355,7 @@ jobs:
           make -f Makefile_infra plan TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
 
       - name: Terragrunt apply
-        if: ${{ inputs.labelstudio }} == run
+        if: ${{ inputs.labelstudio }} == 'run'
         id: apply
         run: |
           make -f Makefile_infra apply TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}
@@ -369,6 +369,6 @@ jobs:
           echo DNS_URL=$DNS_URL >> $GITHUB_OUTPUT
 
       - name: Terragrunt destroy
-        if: ${{ inputs.labelstudio }} == destroy
+        if: ${{ inputs.labelstudio }} == 'destroy'
         run: |
           terragrunt destroy --terragrunt-non-interactive -auto-approve --terragrunt-working-dir ${TERRAGRUNT_CONFIG_PATH} -target module.labelstudio
