@@ -15,9 +15,10 @@ locals {
     templatefile(
       "${get_terragrunt_dir()}/config.yml",
       {
-        vpc_id      = ""
-        branch_name = ""
-        port        = 0
+        vpc_id            = ""
+        branch_name       = ""
+        port              = 0
+        health_check_path = ""
       }
     )
   )
