@@ -34,7 +34,6 @@ locals {
       {
         vpc_id      = get_env("VPC_ID")
         branch_name = local.branch_name
-        port        = local.config_override.port
       }
     )
   )
@@ -76,13 +75,17 @@ inputs = {
     traffics = [
       for traffic in local.config.microservice.container.traffics : {
         listener = {
-          port     = try(traffic.listener.port, null)
-          protocol = traffic.listener.protocol
+          port             = try(traffic.listener.port, null)
+          protocol         = traffic.listener.protocol
+          protocol_version = try(traffic.listener.protocol_version, null)
+          status_code      = try(traffic.listener.status_code, null)
         },
         target = {
-          port              = try(traffic.listener.port, local.config_override.port)
+          port              = local.config_override.port
           protocol          = traffic.target.protocol
-          health_check_path = local.config_override.healthCheckPath
+          protocol_version  = try(traffic.target.protocol_version, null)
+          health_check_path = coalesce(local.config_override.healthCheckPath, null)
+          status_code       = try(traffic.target.status_code, null)
         }
       }
     ]
