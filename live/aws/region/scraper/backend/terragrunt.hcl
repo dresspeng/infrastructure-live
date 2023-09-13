@@ -51,7 +51,7 @@ terraform {
     execute = [
       "/bin/bash",
       "-c",
-      "echo COMMON_NAME=${join("-", [local.name_prefix, "sp", "be", local.name_suffix])} >> ${local.env_local_path}"
+      "echo COMMON_NAME=${join("-", [local.name_prefix, "sp", local.name_suffix])} >> ${local.env_local_path}"
     ]
   }
 
