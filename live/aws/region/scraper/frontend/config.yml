@@ -16,6 +16,7 @@ microservice:
         target:
           port: ${port}
           protocol: "http"
+          health_check_path: ${health_check_path}
     ecs: {}
     group:
       name: unique

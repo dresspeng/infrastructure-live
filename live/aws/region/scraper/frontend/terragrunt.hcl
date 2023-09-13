@@ -32,9 +32,10 @@ locals {
     templatefile(
       "${get_terragrunt_dir()}/config.yml",
       {
-        vpc_id      = get_env("VPC_ID")
-        branch_name = local.branch_name
-        port        = local.config_override.port
+        vpc_id            = get_env("VPC_ID")
+        branch_name       = local.branch_name
+        port              = local.config_override.port
+        health_check_path = local.config_override.healthCheckPath
       }
     )
   )
