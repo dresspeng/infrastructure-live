@@ -32,22 +32,35 @@ locals {
     templatefile(
       "${get_terragrunt_dir()}/config.yml",
       {
-        vpc_id      = get_env("VPC_ID")
-        branch_name = local.branch_name
-        port        = local.config_override.port
+        vpc_id            = get_env("VPC_ID")
+        branch_name       = local.branch_name
+        port              = local.config_override.port
         health_check_path = local.config_override.healthCheckPath
       }
     )
   )
+
+  env_local_path = "${get_terragrunt_dir()}/${local.override_extension_name}.env"
+  name_prefix    = lower(substr(local.convention_tmp_vars.locals.organization_name, 0, 2))
+  name_suffix    = lower(join("-", [local.account_name, join("-", [for str in split("-", local.account_region_name) : substr(str, 0, 1)]), local.branch_name]))
 }
 
 terraform {
+  before_hook "env" {
+    commands = ["init"]
+    execute = [
+      "/bin/bash",
+      "-c",
+      "echo COMMON_NAME=${join("-", [local.name_prefix, "sp", "be", local.name_suffix])} >> ${local.env_local_path}"
+    ]
+  }
+
   source = "${local.modules_git_prefix}//projects/module/aws/projects/scraper/backend?ref=${local.modules_branch_name}"
 }
 
 inputs = {
-  name_prefix = lower(substr(local.convention_tmp_vars.locals.organization_name, 0, 2))
-  name_suffix = lower(join("-", [local.account_name, join("-", [for str in split("-", local.account_region_name) : substr(str, 0, 1)]), local.branch_name]))
+  name_prefix = local.name_prefix
+  name_suffix = local.name_suffix
 
   vpc = local.config.vpc
 
@@ -69,7 +82,7 @@ inputs = {
     bucket_env = merge(
       local.config.bucket_env,
       {
-        file_path = "${get_terragrunt_dir()}/${local.override_extension_name}.env"
+        file_path = local.env_local_path
       }
     )
 
