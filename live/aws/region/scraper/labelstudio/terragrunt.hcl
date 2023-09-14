@@ -19,6 +19,8 @@ locals {
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
 
+  branch_name = local.modules_branch_name
+
   name_prefix = lower(substr(local.convention_tmp_vars.locals.organization_name, 0, 2))
   name_suffix = lower(join("-", [local.account_name, join("-", [for str in split("-", local.account_region_name) : substr(str, 0, 1)]), local.branch_name]))
 

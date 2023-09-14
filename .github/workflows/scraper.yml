@@ -341,8 +341,6 @@ jobs:
             AWS_PROFILE_NAME=$AWS_PROFILE_NAME  \
             AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
 
-          make prepare-scraper-labelstudio
-
       - name: Terragrunt init
         run: |
           make -f Makefile_infra init TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH}

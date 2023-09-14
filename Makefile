@@ -155,16 +155,6 @@ prepare-microservice:
 			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
 	fi
 
-prepare-scraper-labelstudio:
-	$(call check_defined, OVERRIDE_EXTENSION)
-
-	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/labelstudio)
-	$(eval DEFAULT_BRANCH_NAME=trunk)
-	make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice-config-file \
-		TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
-		OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
-		BRANCH_NAME=${DEFAULT_BRANCH_NAME}
-
 prepare-scraper-backend:
 	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend)
 	$(eval ORGANIZATION_NAME=dresspeng)
