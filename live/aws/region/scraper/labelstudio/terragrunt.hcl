@@ -152,10 +152,11 @@ inputs = {
   name_suffix = local.name_suffix
 
   labelstudio = {
-    instance_type    = "t3.small"
-    desired_capacity = 1
-    max_size         = 1
-    min_size         = 1
+    instance_type      = "t3.medium"
+    desired_capacity   = 1
+    max_size           = 1
+    min_size           = 1
+    lets_encrypt_email = ""
   }
 
   iam = {
@@ -168,7 +169,7 @@ inputs = {
     versioning    = true
   }
 
-  create_acm_certificate = true
+  create_acm_certificate = false
   route53 = {
     zone = {
       name = "${local.domain_name}.${local.domain_suffix}"
