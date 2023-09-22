@@ -40,6 +40,8 @@ jobs:
       AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
       ECR_REGISTRY_PRIVATE_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION_NAME }}.amazonaws.com
       ECR_REGISTRY_PUBLIC_URI: public.ecr.aws
+      AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -55,8 +57,8 @@ jobs:
           echo IMAGE_KEEP_COUNT=$IMAGE_KEEP_COUNT >> $GITHUB_ENV
 
           DOCKERFILES=$(jq --null-input -c \
-          --arg repo_bin  "VARIANT=$(if [[ $ECR_PRIVACY == private ]]; then echo $ECR_REGISTRY_PRIVATE_URI; else echo $ECR_REGISTRY_PUBLIC_URI/$ECR_REGISTRY_PUBLIC_ALIAS; fi)/$(echo $REPOSITORY_NAME-$BRANCH_NAME-bin | tr A-Z a-z)" \
-          '[{ "path":"Dockerfile.bin" },{ "path":"Dockerfile","args": [ $repo_bin ] },{ "path":"Dockerfile.bin","args": [ "TERRAFORM_VERSION=1.4.4","TERRAGRUNT_VERSION=0.45.0"], "tags":["1.4.4"]},{ "path":"Dockerfile","args": [ $repo_bin:1.4.4 ], "tags":["1.4.4"] },{ "path":"Dockerfile.bin","args": [ "VARIANT=mcr.microsoft.com/devcontainers/base:alpine-3.16" ], "extension": "devcontainer" }]')
+          ${{ vars.CONTAINER_REGISTRY_ARGS }} \
+          '${{ vars.CONTAINER_REGISTRY_JSON }}')
           echo DOCKERFILES=$DOCKERFILES
           echo DOCKERFILES=$DOCKERFILES >> $GITHUB_ENV
 
