@@ -76,7 +76,7 @@ prepare-convention-config-file:
 
 	$(eval MODULES_GIT_HOST_AUTH_METHOD=https)
 	$(eval MODULES_GIT_HOST=github.com)
-	$(eval MODULES_ORGANIZATION_NAME=dresspeng)
+	$(eval MODULES_ORGANIZATION_NAME=vistimi)
 	$(eval MODULES_PROJECT_NAME=infrastructure)
 	$(eval MODULES_SERVICE_NAME=modules)
 	$(eval MODULES_REPOSITORY_VISIBILITY=public)
@@ -155,9 +155,57 @@ prepare-microservice:
 			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
 	fi
 
+prepare-tryon-backend:
+	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/tryon/backend)
+	$(eval ORGANIZATION_NAME=vistimi)
+	$(eval REPOSITORY_NAME=VITON-HD)
+	$(eval DEFAULT_BRANCH_NAME=trunk)
+
+	$(call check_defined, OVERRIDE_EXTENSION, GITHUB_TOKEN, ORGANIZATION_NAME, REPOSITORY_NAME, DEFAULT_BRANCH_NAME)
+	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
+	$(eval branches=$(shell make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
+	if [[ '$(shell echo ${branches} | grep -o "${BRANCH_NAME}" | wc -l)' == '0' ]]; then
+		$(eval BRANCH_NAME_MICROSERVICE=${DEFAULT_BRANCH_NAME})
+		echo -e '\033[43mWarning\033[0m' ::: BRANCH_NAME ${BRANCH_NAME} not found, using ${DEFAULT_BRANCH_NAME}
+		make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice-config-file \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
+	else
+		$(eval BRANCH_NAME_MICROSERVICE=${BRANCH_NAME})
+		make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice-config-file \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
+	fi
+
+prepare-tryon-frontend:
+	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/tryon/frontend)
+	$(eval ORGANIZATION_NAME=vistimi)
+	$(eval REPOSITORY_NAME=tryon-frontend)
+	$(eval DEFAULT_BRANCH_NAME=trunk)
+
+	$(call check_defined, OVERRIDE_EXTENSION, GITHUB_TOKEN, ORGANIZATION_NAME, REPOSITORY_NAME, DEFAULT_BRANCH_NAME)
+	echo GET Github branches:: ${ORGANIZATION_NAME}/${REPOSITORY_NAME}
+	$(eval branches=$(shell make -f ${PATH_ABS_ROOT}/${INFRA_FILE_NAME} gh-list-branches GITHUB_TOKEN=${GITHUB_TOKEN} ORGANIZATION_NAME=${ORGANIZATION_NAME} REPOSITORY_NAME=${REPOSITORY_NAME}))
+	if [[ '$(shell echo ${branches} | grep -o "${BRANCH_NAME}" | wc -l)' == '0' ]]; then
+		$(eval BRANCH_NAME_MICROSERVICE=${DEFAULT_BRANCH_NAME})
+		echo -e '\033[43mWarning\033[0m' ::: BRANCH_NAME ${BRANCH_NAME} not found, using ${DEFAULT_BRANCH_NAME}
+		make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice-config-file \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
+	else
+		$(eval BRANCH_NAME_MICROSERVICE=${BRANCH_NAME})
+		make -f ${PATH_ABS_ROOT}/${FILE_NAME} prepare-microservice-config-file \
+			TERRAGRUNT_CONFIG_PATH=${TERRAGRUNT_CONFIG_PATH} \
+			OVERRIDE_EXTENSION=${OVERRIDE_EXTENSION} \
+			BRANCH_NAME=${BRANCH_NAME_MICROSERVICE}
+	fi
+
 prepare-scraper-backend:
 	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/backend)
-	$(eval ORGANIZATION_NAME=dresspeng)
+	$(eval ORGANIZATION_NAME=vistimi)
 	$(eval REPOSITORY_NAME=scraper-backend)
 	$(eval REPOSITORY_CONFIG_PATH_FOLDER=config)
 	$(eval DEFAULT_BRANCH_NAME=trunk)
@@ -208,7 +256,7 @@ prepare-scraper-backend-env:
 
 prepare-scraper-frontend:
 	$(eval TERRAGRUNT_CONFIG_PATH=live/aws/region/scraper/frontend)
-	$(eval ORGANIZATION_NAME=dresspeng)
+	$(eval ORGANIZATION_NAME=vistimi)
 	$(eval REPOSITORY_NAME=scraper-frontend)
 	$(eval REPOSITORY_CONFIG_PATH_FOLDER=config)
 	$(eval DEFAULT_BRANCH_NAME=trunk)

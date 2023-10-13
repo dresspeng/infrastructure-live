@@ -10,27 +10,18 @@ locals {
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
-  config = yamldecode(
-    templatefile(
-      "${get_terragrunt_dir()}/config.yml",
-      {
-        vpc_id            = ""
-        branch_name       = ""
-        port              = 0
-        health_check_path = ""
-      }
-    )
-  )
 
-  name_prefix                 = lower(substr(local.convention_tmp_vars.locals.organization_name, 0, 2))
-  backend_bucket_name         = lower(join("-", compact([local.name_prefix, local.account_name, local.account_region_name, local.config.repository_name, local.branch_name, "tf-state"])))
-  backend_dynamodb_table_name = lower(join("-", compact([local.name_prefix, local.account_name, local.account_region_name, local.config.repository_name, local.branch_name, "tf-locks"])))
+  path = regex("^.*/(?P<project_name>[0-9A-Za-z!_-]+)/(?P<service_name>[0-9A-Za-z!_-]+)$", get_terragrunt_dir())
+  # organization_name_s  = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
+  project_name_s = substr(local.path.project_name, 0, 2)
+  service_name_s = substr(local.path.service_name, 0, 2)
+  branch_name_s  = substr(local.branch_name, 0, 2)
+  account_name_s = substr(local.account_name, 0, 2)
+  region_name_s  = join("", [for str in split("-", local.account_region_name) : substr(str, 0, 1)])
+  name           = lower(join("-", [local.project_name_s, local.service_name_s, local.branch_name_s, local.account_name_s, local.region_name_s]))
 
-  tags = merge(
-    local.convention_vars.locals.tags,
-    local.account_vars.locals.tags,
-    local.config.tags,
-  )
+  backend_bucket_name         = "${local.name}-tf-state"
+  backend_dynamodb_table_name = "${local.name}-tf-locks"
 }
 
 # Generate version block
@@ -66,13 +57,13 @@ generate "provider" {
 remote_state {
   backend = "s3"
   config = {
-    encrypt             = true
-    key                 = "${path_relative_to_include()}/terraform.tfstate"
-    region              = local.account_region_name
-    bucket              = local.backend_bucket_name
-    dynamodb_table      = local.backend_dynamodb_table_name
-    s3_bucket_tags      = local.tags
-    dynamodb_table_tags = local.tags
+    encrypt        = true
+    key            = "${path_relative_to_include()}/terraform.tfstate"
+    region         = local.account_region_name
+    bucket         = local.backend_bucket_name
+    dynamodb_table = local.backend_dynamodb_table_name
+    # s3_bucket_tags      = local.tags
+    # dynamodb_table_tags = local.tags
   }
 
   generate = {

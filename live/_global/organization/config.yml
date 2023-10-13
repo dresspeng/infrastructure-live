@@ -68,6 +68,10 @@ aws:
             ]
           effect: "Allow"
           resources: ["*"] # TODO: restrain for public ones
+        - sid: "Terraform"
+          actions: ["s3:*", "dynamodb:*"]
+          effect: "Allow"
+          resources: ["*"] # TODO: not allow that long term
     base:
       force_destroy: true
       pw_length: 20
@@ -128,14 +132,16 @@ aws:
 
 github:
   accesses:
-    - owner: dresspeng
+    - owner: vistimi
       name: infrastructure-modules
-    - owner: dresspeng
+    - owner: vistimi
       name: infrastructure-live
-    - owner: dresspeng
+    - owner: vistimi
       name: scraper-backend
-    - owner: dresspeng
+    - owner: vistimi
       name: scraper-frontend
+    - owner: vistimi
+      name: tryon-frontend
   repositories:
     - variables:
         - key: ECR_ENV_NAME

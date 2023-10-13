@@ -24,17 +24,17 @@ microservice:
         min_size: 1
         desired_size: 1
         max_size: 1
-        container:
-          name: unique
-          docker:
-            registry:
-              ecr:
-                privacy: "private"
-            repository:
-              name: "scraper-backend-${branch_name}"
-            image:
-              tag: latest
-          readonly_root_filesystem: true
+        containers:
+          - name: unique
+            docker:
+              registry:
+                ecr:
+                  privacy: "private"
+              repository:
+                name: "scraper-backend-${branch_name}"
+              image:
+                tag: latest
+            readonly_root_filesystem: true
 
       ec2:
         instance_types: ["t3.medium"]
@@ -50,6 +50,6 @@ bucket_env:
   versioning: true
 
 tags:
-  "Git Microservice": "github.com/dresspeng/scraper-backend@${branch_name}"
+  "Git Microservice": "github.com/vistimi/scraper-backend@${branch_name}"
   "Project": "scraper"
   "Service": "backend"

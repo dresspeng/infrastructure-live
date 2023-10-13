@@ -27,59 +27,46 @@ locals {
 
   branch_name = local.service_tmp_vars.locals.branch_name
 
-  config_override = yamldecode(file("${get_terragrunt_dir()}/config_override.yml"))
   config = yamldecode(
     templatefile(
       "${get_terragrunt_dir()}/config.yml",
       {
         vpc_id            = get_env("VPC_ID")
         branch_name       = local.branch_name
-        port              = local.config_override.port
-        health_check_path = local.config_override.healthCheckPath
+        port              = 3000
+        health_check_path = "/ping"
+        zone              = "${local.domain_name}.${local.domain_suffix}"
+        subdomain_prefix    = local.branch_name == "trunk" ? "" : "${local.branch_name}."
       }
     )
   )
+
+  path = regex("^.*/(?P<project_name>[0-9A-Za-z!_-]+)/(?P<service_name>[0-9A-Za-z!_-]+)$", get_terragrunt_dir())
+  # organization_name_s  = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
+  project_name_s = substr(local.path.project_name, 0, 2)
+  service_name_s = substr(local.path.service_name, 0, 2)
+  branch_name_s  = substr(local.branch_name, 0, 2)
+  account_name_s = substr(local.account_name, 0, 2)
+  region_name_s  = join("", [for str in split("-", local.account_region_name) : substr(str, 0, 1)])
+  name           = lower(join("-", [local.project_name_s, local.service_name_s, local.branch_name_s, local.account_name_s, local.region_name_s]))
 }
 
 terraform {
-  source = "${local.modules_git_prefix}//projects/module/aws/projects/scraper/frontend?ref=${local.modules_branch_name}"
+  source = "tfr:///vistimi/microservice/aws//?version=0.0.8"
 }
 
 inputs = {
-  name_prefix = lower(substr(local.convention_tmp_vars.locals.organization_name, 0, 2))
-  name_suffix = lower(join("-", [local.account_name, join("", [for str in split("-", local.account_region_name) : substr(str, 0, 1)]), local.branch_name]))
-
+  name = local.name
 
   vpc = local.config.vpc
 
-  microservice = {
-    iam = local.config.iam
+  iam = local.config.iam
 
-    route53 = {
-      zones = [
-        {
-          name = "${local.domain_name}.${local.domain_suffix}"
-        }
-      ]
-      record = {
-        prefixes       = ["www"]
-        subdomain_name = format("%s%s", local.branch_name == "trunk" ? "" : "${local.branch_name}.", local.config.repository_name)
-      }
-    }
+  traffics = local.config.traffics
 
-    bucket_env = merge(
-      local.config.bucket_env,
-      {
-        file_path = "${get_terragrunt_dir()}/${local.override_extension_name}.env"
-      }
-    )
+  route53 = route53 = local.config.route53
 
-    container = local.config.microservice.container
-  }
+  orchestrator = local.config.orchestrator
 
-  tags = merge(
-    local.convention_tmp_vars.locals.tags,
-    local.account_vars.locals.tags,
-    local.config.tags,
-  )
+  tags = local.tags
 }

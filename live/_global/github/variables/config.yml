@@ -18,22 +18,24 @@ organization:
 
 repositories:
   - accesses:
-      - owner: dresspeng
+      - owner: vistimi
         name: infrastructure-modules
-      - owner: dresspeng
+      - owner: vistimi
         name: infrastructure-live
-      - owner: dresspeng
+      - owner: vistimi
         name: scraper-backend
-      - owner: dresspeng
+      - owner: vistimi
         name: scraper-frontend
+      - owner: vistimi
+        name: tryon-frontend
     variables:
       - key: CONTAINER_REGISTRY_PRIVACY
         value: private
     secrets:
   - accesses:
-      - owner: dresspeng
+      - owner: vistimi
         name: infrastructure-modules
-      - owner: dresspeng
+      - owner: vistimi
         name: infrastructure-live
     variables:
       - key: CONTAINER_REGISTRY_ARGS
@@ -44,10 +46,12 @@ repositories:
         value: '[{ "path":"Dockerfile.bin" }, { "path":"Dockerfile","args": [ $repo_bin ] }, { "path":"Dockerfile.bin","args": [ "TERRAFORM_VERSION=1.4.4","TERRAGRUNT_VERSION=0.45.0"], "tags":["1.4.4"]}, { "path":"Dockerfile","args": [ $repo_bin_1_4_4 ], "tags":["1.4.4"] }, { "path":"Dockerfile.bin","args": [ "VARIANT=mcr.microsoft.com/devcontainers/base:alpine-3.16" ], "extension": "devcontainer" } ]'
     secrets:
   - accesses:
-      - owner: dresspeng
+      - owner: vistimi
         name: scraper-backend
-      - owner: dresspeng
+      - owner: vistimi
         name: scraper-frontend
+      - owner: vistimi
+        name: tryon-frontend
     variables:
       - key: CONTAINER_REGISTRY_JSON
         value: '[{ "path": "Dockerfile" }]'

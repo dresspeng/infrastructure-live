@@ -42,7 +42,7 @@ locals {
 
   env_local_path = "${get_terragrunt_dir()}/${local.override_extension_name}.env"
   name_prefix    = lower(substr(local.convention_tmp_vars.locals.organization_name, 0, 2))
-  name_suffix    = lower(join("-", [local.account_name, join("-", [for str in split("-", local.account_region_name) : substr(str, 0, 1)]), local.branch_name]))
+  name_suffix    = lower(join("-", [local.account_name, join("", [for str in split("-", local.account_region_name) : substr(str, 0, 1)]), local.branch_name]))
 }
 
 terraform {
