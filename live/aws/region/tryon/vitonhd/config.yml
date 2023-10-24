@@ -3,10 +3,6 @@ inputs:
     id: ${vpc_id}
     tag_tier: "public"
 
-  iam:
-    scope: "accounts"
-    requires_mfa: false
-
   traffics:
     - listener:
         protocol: "http"
@@ -22,7 +18,7 @@ inputs:
       - name: ${zone}
     record:
       prefixes: ["www"]
-      subdomain_name: ${subdomain_prefix}tryon-frontend
+      subdomain_name: ${subdomain_prefix}viton-hd
 
   orchestrator:
     ecs: {}
@@ -39,24 +35,21 @@ inputs:
                 ecr:
                   privacy: "private"
               repository:
-                name: "tryon-frontend-${branch_name}"
+                name: "viton-hd-${branch_name}-rest"
+                # name: "viton-hd-${branch_name}-infra-serve"
               image:
                 tag: latest
+                # tag: gmm
             readonly_root_filesystem: false
       ec2:
-        instance_types: ["t3.medium"]
+        instance_types: ["c7i.8xlarge"]
+        # instance_types: ["inf1.6xlarge"]
         os: "linux"
         os_version: "2"
         capacities:
           - type: "ON_DEMAND"
 
-  bucket_env:
-    file_path: ${bucket_file_path}
-    file_key: "${branch_name}.env"
-    force_destroy: false
-    versioning: true
-
   tags:
-    Git Microservice: github.com/vistimi/tryon-frontend@${branch_name}
+    Git Microservice: github.com/vistimi/VITON-HD@${branch_name}
     Project: tryon
-    Service: frontend
+    Service: backend

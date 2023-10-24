@@ -41,38 +41,31 @@ locals {
     )
   )
 
-  path = regex("^.*/(?P<project_name>[0-9A-Za-z!_-]+)/(?P<service_name>[0-9A-Za-z!_-]+)$", get_terragrunt_dir())
-  # organization_name_s  = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
-  project_name_s = substr(local.path.project_name, 0, 2)
-  service_name_s = substr(local.path.service_name, 0, 2)
-  branch_name_s  = substr(local.branch_name, 0, 2)
-  account_name_s = substr(local.account_name, 0, 2)
-  region_name_s  = join("", [for str in split("-", local.account_region_name) : substr(str, 0, 1)])
-  name           = lower(join("-", [local.project_name_s, local.service_name_s, local.branch_name_s, local.account_name_s, local.region_name_s]))
+  path                = regex("^.*/(?P<project_name>[0-9A-Za-z!_-]+)/(?P<service_name>[0-9A-Za-z!_-]+)$", get_terragrunt_dir())
+  organization_name_s = substr(local.convention_tmp_vars.locals.organization_name, 0, 2)
+  project_name_s      = join("", [for str in split("-", local.path.project_name) : substr(str, 0, 2)])
+  service_name_s      = join("", [for str in split("-", local.path.service_name) : substr(str, 0, 2)])
+  prefix_name_s       = join("", [local.organization_name_s, local.project_name_s, local.service_name_s])
+  branch_name_s       = join("", [for str in split("-", local.branch_name) : substr(str, 0, 5)])
+  account_name_s      = join("", [for str in split("-", local.account_name) : substr(str, 0, 5)])
+  region_name_s       = join("", [for str in split("-", local.account_region_name) : substr(str, 0, 1)])
+  name                = lower(join("-", [local.prefix_name_s, local.branch_name_s, local.account_name_s, local.region_name_s]))
 
   tags = merge(
     local.convention_tmp_vars.locals.tags,
     local.account_vars.locals.tags,
-    local.config.tags,
+    local.config.inputs.tags,
   )
 }
 
 terraform {
-  source = "tfr:///vistimi/microservice/aws//?version=0.0.9"
+  source = "tfr:///vistimi/microservice/aws//?version=0.0.10"
 }
 
-inputs = {
-  name = local.name
-
-  vpc = local.config.vpc
-
-  iam = local.config.iam
-
-  traffics = local.config.traffics
-
-  route53 = local.config.route53
-
-  orchestrator = local.config.orchestrator
-
-  tags = local.tags
-}
+inputs = merge(
+  local.config.inputs,
+  {
+    name = local.name
+    tags = local.tags
+  }
+)

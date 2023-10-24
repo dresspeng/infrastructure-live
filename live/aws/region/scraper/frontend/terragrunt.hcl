@@ -42,9 +42,10 @@ locals {
 }
 
 terraform {
-  source = "${local.modules_git_prefix}//projects/module/aws/projects/scraper/frontend?ref=${local.modules_branch_name}"
+  source = "${local.modules_git_prefix}//projects/modules/aws/projects/scraper/frontend?ref=${local.modules_branch_name}"
 }
 
+# FIXME: deprecated
 inputs = {
   name_prefix = lower(substr(local.convention_tmp_vars.locals.organization_name, 0, 2))
   name_suffix = lower(join("-", [local.account_name, join("", [for str in split("-", local.account_region_name) : substr(str, 0, 1)]), local.branch_name]))

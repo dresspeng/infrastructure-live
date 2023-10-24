@@ -1,10 +1,5 @@
 # infrastructure
 
-## pipeline
-
-before terragrunt command:
-  ssh -T -oStrictHostKeyChecking=accept-new git@github.com || true
-
 ## run
 
 Open the project with the dev container.
@@ -36,14 +31,6 @@ terragrunt destroy
 
 # auto approve
 terragrunt <command> -auto-approve
-```
-
-#### all
-The `run-all` command will use the config for the child terragrunt file. Without it, the command is executed on the current working directory.
-
-```shell
-cd live/<region>/<environment>
-terragrunt run-all <command>
 ```
 
 ## nuke
@@ -161,11 +148,3 @@ SSH_PRIVATE_KEY="-----BEGIN\bOPENSSH\bPRIVATE\bKEY-----\n***\n-----END\bOPENSSH\
 ```
 
 The variables needs to be blank string, replace new line with `\n`, replace backspace with `\b`
-
-## vpc
-#### cidr
-
-- 1.0.0.0/16 scraper-backend
-- 2.0.0.0/16 scraper-frontend
-
-The second part is reserved for different regions for example.

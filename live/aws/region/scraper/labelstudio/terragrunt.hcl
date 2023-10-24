@@ -144,7 +144,7 @@ terraform {
     arguments = ["-lock-timeout=10m"]
   }
 
-  source = "${local.modules_git_prefix}//projects/module/aws/projects/scraper/labelstudio?ref=${local.modules_branch_name}"
+  source = "${local.modules_git_prefix}//projects/modules/aws/projects/scraper/labelstudio?ref=${local.modules_branch_name}"
 }
 
 inputs = {

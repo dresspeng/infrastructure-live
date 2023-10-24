@@ -28,7 +28,7 @@ locals {
 }
 
 terraform {
-  source = "${local.modules_git_prefix}//module/github/variables?ref=${local.modules_branch_name}"
+  source = "${local.modules_git_prefix}//modules/github/variables?ref=${local.modules_branch_name}"
 }
 
 inputs = local.config

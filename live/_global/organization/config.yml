@@ -46,7 +46,11 @@ aws:
         - name: "live"
         - name: "test"
       statements:
-        - sid: "EcrReadExternal"
+        - sid: "Terraform"
+          actions: ["s3:*", "dynamodb:*"]
+          effect: "Allow"
+          resources: ["*"] # TODO: not allow that long term
+        - sid: "EcrRead"
           actions:
             [
               "ecr:GetAuthorizationToken",
@@ -55,23 +59,15 @@ aws:
               "ecr:BatchGetImage",
             ]
           effect: "Allow"
-          resources:
-            [
-              "arn:aws:ecr:*:${account_id}:repository/infrastructure-live-*",
-              "arn:aws:ecr:*:${account_id}:repository/infrastructure-modules-*",
-            ]
-        - sid: "EcrPublicReadExternal"
+          resources: ["*"]
+        - sid: "EcrPublicRead"
           actions:
             [
               "ecr-public:GetAuthorizationToken",
               "ecr-public:BatchCheckLayerAvailability",
             ]
           effect: "Allow"
-          resources: ["*"] # TODO: restrain for public ones
-        - sid: "Terraform"
-          actions: ["s3:*", "dynamodb:*"]
-          effect: "Allow"
-          resources: ["*"] # TODO: not allow that long term
+          resources: ["*"]
     base:
       force_destroy: true
       pw_length: 20
@@ -133,15 +129,7 @@ aws:
 github:
   accesses:
     - owner: vistimi
-      name: infrastructure-modules
-    - owner: vistimi
-      name: infrastructure-live
-    - owner: vistimi
-      name: scraper-backend
-    - owner: vistimi
-      name: scraper-frontend
-    - owner: vistimi
-      name: tryon-frontend
+      name: terraform-aws-microservice
   repositories:
     - variables:
         - key: ECR_ENV_NAME

@@ -21,7 +21,7 @@ locals {
 }
 
 terraform {
-  source = "${local.modules_git_prefix}//module/aws/network/vpc?ref=${local.modules_branch_name}"
+  source = "${local.modules_git_prefix}//modules/aws/network/vpc?ref=${local.modules_branch_name}"
 }
 
 inputs = {

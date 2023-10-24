@@ -55,9 +55,10 @@ terraform {
     ]
   }
 
-  source = "${local.modules_git_prefix}//projects/module/aws/projects/scraper/backend?ref=${local.modules_branch_name}"
+  source = "${local.modules_git_prefix}//projects/modules/aws/projects/scraper/backend?ref=${local.modules_branch_name}"
 }
 
+# FIXME: deprecated
 inputs = {
   name_prefix = local.name_prefix
   name_suffix = local.name_suffix
