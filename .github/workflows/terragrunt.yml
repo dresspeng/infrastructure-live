@@ -27,12 +27,11 @@ jobs:
     environment: ${{ inputs.environment }}
     env:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
       AWS_REGION_NAME: ${{ vars.AWS_REGION_NAME }}
       AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
-      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -41,7 +40,7 @@ jobs:
         run: |
           aws --version
           aws configure set aws_access_key_id $AWS_ACCESS_KEY
-          aws configure set aws_secret_access_key $AWS_SECRET_KEY
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
           aws configure set region $AWS_REGION_NAME
 
       # # FIXME: there is no package for registry.terraform.io/hashicorp/aws there is no package for registry.terraform.io/hashicorp/null
@@ -65,7 +64,7 @@ jobs:
       #       --env AWS_REGION_NAME=${AWS_REGION_NAME} \
       #       --env AWS_PROFILE_NAME=${AWS_PROFILE_NAME} \
       #       --env AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
-      #       --env AWS_SECRET_KEY=${AWS_SECRET_KEY} \
+      #       --env AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
       #       --env AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID} \
       #       --env ENVIRONMENT_NAME=${ENVIRONMENT_NAME} \
       #       --env GITHUB_TOKEN=${GH_TERRA_TOKEN} \

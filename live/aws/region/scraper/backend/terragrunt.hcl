@@ -20,7 +20,6 @@ locals {
   modules_git_prefix = local.convention_vars.locals.modules_git_prefix
 
   domain_name         = local.account_vars.locals.domain_name
-  domain_suffix       = local.account_vars.locals.domain_suffix
   account_region_name = local.account_vars.locals.account_region_name
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
@@ -71,7 +70,7 @@ inputs = {
     route53 = {
       zones = [
         {
-          name = "${local.domain_name}.${local.domain_suffix}"
+          name = local.domain_name
         }
       ]
       record = {

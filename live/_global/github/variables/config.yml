@@ -1,9 +1,7 @@
 organization:
   variables:
     - key: DOMAIN_NAME
-      value: vistimi
-    - key: DOMAIN_SUFFIX
-      value: com
+      value: vistimi.com
     # - key: ECR_REGISTRY_PUBLIC_ALIAS
     #   value: h4s7f1i8
     - key: SSH_PUBLIC_KEY

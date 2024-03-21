@@ -60,7 +60,7 @@ jobs:
         run: |
           aws --version
           aws configure set aws_access_key_id ${{ vars.AWS_ACCESS_KEY }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_KEY }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws configure set region ${{ vars.AWS_REGION_NAME }}
 
       - name: Get ECR information
@@ -96,9 +96,8 @@ jobs:
       AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
-      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
       VPC_ID: ${{ vars.VPC_ID }}
       TERRAGRUNT_CONFIG_PATH: live/aws/region/scraper/backend
     outputs:
@@ -139,7 +138,6 @@ jobs:
         run: |
           make prepare-terragrunt \
             DOMAIN_NAME=${{ vars.DOMAIN_NAME }}  \
-            DOMAIN_SUFFIX=${{ vars.DOMAIN_SUFFIX }}  \
             AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
             AWS_PROFILE_NAME=${{ vars.AWS_PROFILE_NAME }}  \
             AWS_ACCOUNT_ID=${{ vars.AWS_ACCOUNT_ID }}
@@ -155,7 +153,7 @@ jobs:
             PEXELS_PUBLIC_KEY=${{ secrets.PEXELS_PUBLIC_KEY }} \
             AWS_REGION_NAME=${{ vars.AWS_REGION_NAME }} \
             AWS_ACCESS_KEY=${{ vars.AWS_ACCESS_KEY }} \
-            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Terragrunt init
         run: |
@@ -200,9 +198,8 @@ jobs:
       AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
-      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
       VPC_ID: ${{ vars.VPC_ID }}
       TERRAGRUNT_CONFIG_PATH: live/aws/region/scraper/frontend
     outputs:
@@ -243,7 +240,6 @@ jobs:
         run: |
           make prepare-terragrunt \
             DOMAIN_NAME=$DOMAIN_NAME  \
-            DOMAIN_SUFFIX=$DOMAIN_SUFFIX  \
             AWS_REGION_NAME=$AWS_REGION_NAME \
             AWS_PROFILE_NAME=$AWS_PROFILE_NAME  \
             AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
@@ -297,9 +293,8 @@ jobs:
       AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_ACCESS_KEY: ${{ vars.AWS_ACCESS_KEY }}
-      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      DOMAIN_SUFFIX: ${{ vars.DOMAIN_SUFFIX }}
       VPC_ID: ${{ vars.VPC_ID }}
       TERRAGRUNT_CONFIG_PATH: live/aws/region/scraper/labelstudio
     outputs:
@@ -336,7 +331,6 @@ jobs:
         run: |
           make prepare-terragrunt \
             DOMAIN_NAME=$DOMAIN_NAME  \
-            DOMAIN_SUFFIX=$DOMAIN_SUFFIX  \
             AWS_REGION_NAME=$AWS_REGION_NAME \
             AWS_PROFILE_NAME=$AWS_PROFILE_NAME  \
             AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID

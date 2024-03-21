@@ -79,17 +79,17 @@ nuke-global:
 
 USE_DEFAULT ?= false
 aws-auth:
-	$(call check_defined, AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION_NAME)
+	$(call check_defined, AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY, AWS_REGION_NAME)
 	aws --version
 	if [[ ${USE_DEFAULT} == false ]]; then
 		$(call check_defined, AWS_PROFILE_NAME)
 		aws configure set aws_access_key_id ${AWS_ACCESS_KEY} --profile ${AWS_PROFILE_NAME}
-		aws configure set aws_secret_access_key ${AWS_SECRET_KEY} --profile ${AWS_PROFILE_NAME}
+		aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY} --profile ${AWS_PROFILE_NAME}
 		aws configure set region ${AWS_REGION_NAME} --profile ${AWS_PROFILE_NAME}
 		aws configure set output 'text' --profile ${AWS_PROFILE_NAME}
 	else
 		aws configure set aws_access_key_id ${AWS_ACCESS_KEY}
-		aws configure set aws_secret_access_key ${AWS_SECRET_KEY}
+		aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}
 		aws configure set region ${AWS_REGION_NAME}
 		aws configure set output 'text'
 	fi

@@ -20,7 +20,6 @@ locals {
   modules_git_prefix = local.convention_vars.locals.modules_git_prefix
 
   domain_name         = local.account_vars.locals.domain_name
-  domain_suffix       = local.account_vars.locals.domain_suffix
   account_region_name = local.account_vars.locals.account_region_name
   account_name        = local.account_vars.locals.account_name
   account_id          = local.account_vars.locals.account_id
@@ -35,7 +34,7 @@ locals {
         branch_name       = local.branch_name
         port              = 8080
         health_check_path = "/ping"
-        zone              = "${local.domain_name}.${local.domain_suffix}"
+        zone              = local.domain_name
         subdomain_prefix  = local.branch_name == "trunk" ? "" : "${local.branch_name}."
       }
     )

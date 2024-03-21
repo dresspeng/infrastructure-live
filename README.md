@@ -123,17 +123,16 @@ statements:
 #### devcontainer
 
 ```env
-AWS_REGION_NAME=***
-AWS_PROFILE_NAME=***
-AWS_ACCOUNT_ID=***
-AWS_ACCESS_KEY=***
-AWS_SECRET_KEY=***
+AWS_REGION_NAME=xxx
+AWS_PROFILE_NAME=xxx
+AWS_ACCOUNT_ID=xxx
+AWS_ACCESS_KEY=xxx
+AWS_SECRET_ACCESS_KEY=xxx
 
 GITHUB_OWNER=vistimi
-GITHUB_TOKEN=***GH_TERRA_TOKEN***
-DOMAIN_NAME=vistimi
-DOMAIN_SUFFIX=com
-VPC_ID=***
+GITHUB_TOKEN=xxx
+DOMAIN_NAME=vistimi.com
+VPC_ID=xxx
 
 # scraper
 FLICKR_PRIVATE_KEY=123
@@ -143,8 +142,8 @@ UNSPLASH_PUBLIC_KEY=123
 PEXELS_PUBLIC_KEY=123
 
 # ssh
-SSH_PUBLIC_KEY="***\n***\n***"
-SSH_PRIVATE_KEY="-----BEGIN\bOPENSSH\bPRIVATE\bKEY-----\n***\n-----END\bOPENSSH\bPRIVATE\bKEY-----"
+SSH_PUBLIC_KEY="xxx\nxxx\nxxx"
+SSH_PRIVATE_KEY="-----BEGIN\bOPENSSH\bPRIVATE\bKEY-----\nxxx\n-----END\bOPENSSH\bPRIVATE\bKEY-----"
 ```
 
 The variables needs to be blank string, replace new line with `\n`, replace backspace with `\b`

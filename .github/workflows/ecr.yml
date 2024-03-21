@@ -88,7 +88,7 @@ jobs:
         run: |
           aws --version
           aws configure set aws_access_key_id ${{ vars.AWS_ACCESS_KEY }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_KEY }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws configure set region ${{ vars.AWS_REGION_NAME }}
           aws configure list
 
@@ -96,7 +96,7 @@ jobs:
       #   uses: aws-actions/configure-aws-credentials@v1
       #   with:
       #     aws-access-key-id: ${{ vars.AWS_ACCESS_KEY }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       #     aws-region: ${{ vars.AWS_REGION_NAME }}
 
       # - name: Login to ${{ vars.CONTAINER_REGISTRY_PRIVACY }} ECR
@@ -104,7 +104,7 @@ jobs:
       #   with:
       #     registry: ${{ env.ECR_REGISTRY_URI }}
       #     username: ${{ secrets.AWS_ACCESS_KEY }}
-      #     password: ${{ secrets.AWS_SECRET_KEY }}
+      #     password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Login to ECR
         run: |
