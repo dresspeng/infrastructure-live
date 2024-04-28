@@ -1,8 +1,13 @@
 locals {
-  convention_vars = read_terragrunt_config("convention.hcl")
+  environment         = get_env("BRANCH_REF")
+  account_region_name = get_env("AWS_DEFAULT_REGION")
+
+  name = lower("${get_env("COMPANY_REF")}-${get_env("REPO_REF")}-${local.environment}")
+
+  tags = {}
 
   root_path     = trimsuffix(get_repo_root(), "/")
-  domain_prefix = local.convention_vars.locals.environment == "prod" ? null : local.convention_vars.locals.environment
+  domain_prefix = local.environment == "prod" ? null : local.environment
   domain_name   = get_env("DOMAIN_NAME")
 }
 
@@ -17,7 +22,6 @@ terraform {
       version = ">= 5.0.1"
     }
   }
-
   required_version = ">= 1.4.0"
 }
   EOF
@@ -30,7 +34,7 @@ generate "provider" {
 # Main region where the resources should be created in
 # Should be close to the location of your viewers
 provider "aws" {
-  region = "${local.convention_vars.locals.account_region_name}"
+  region = "${local.account_region_name}"
   # Make it faster by skipping something
   # skip_metadata_api_check     = true
   # skip_region_validation      = true
@@ -45,11 +49,11 @@ remote_state {
     encrypt = true
     # key                 = "${path_relative_to_include()}/terraform.tfstate"
     key                 = "terraform.tfstate"
-    region              = local.convention_vars.locals.account_region_name
-    bucket              = lower(join("-", compact([local.convention_vars.locals.name, "tf-state"])))
-    dynamodb_table      = lower(join("-", compact([local.convention_vars.locals.name, "tf-locks"])))
-    s3_bucket_tags      = local.convention_vars.locals.tags
-    dynamodb_table_tags = local.convention_vars.locals.tags
+    region              = local.account_region_name
+    bucket              = lower(join("-", compact([local.name, "tf-state"])))
+    dynamodb_table      = lower(join("-", compact([local.name, "tf-locks"])))
+    s3_bucket_tags      = local.tags
+    dynamodb_table_tags = local.tags
   }
 
   generate = {
@@ -75,8 +79,8 @@ inputs = {
   }
 
   tags = {
-    Name        = local.convention_vars.locals.name
-    Environment = local.convention_vars.locals.environment
+    Name        = local.name
+    Environment = local.environment
     Terraform   = true
   }
 }
