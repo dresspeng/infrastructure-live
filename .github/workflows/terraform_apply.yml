@@ -1,0 +1,70 @@
+name: "Terraform Apply"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [prod, stag]
+  # pull_request:
+  #   branches-ignore: [prod, stag]
+  #   # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
+  #   types: [opened, synchronize, reopened]
+  repository_dispatch:
+    types: [terraform-apply]
+
+env:
+  tf_version: '1.5.7'
+  tg_version: '0.53.2'
+  working_dir: 'infra'
+  COMPANY_REF: ${{ vars.COMPANY_REF }}
+  REPO_REF: ${{ vars.REPO_REF }}
+  # ASzc/change-string-case-action@master
+  BRANCH_REF: ${{ github.event.client_payload.branch_ref || github.head_ref || github.ref_name }}
+  DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+  AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+  AWS_PROFILE_NAME: ${{ vars.AWS_PROFILE_NAME }}
+  AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+  AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Validate Branch Ref
+        run: |
+          if [[ ! ${{ env.BRANCH_REF }} =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            echo "Invalid BRANCH_REF"
+            exit 1
+          fi
+
+      - name: Terragrunt Init
+        id: init
+        uses: gruntwork-io/terragrunt-action@main
+        with:
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.working_dir }}
+          tg_command: 'init'
+
+      - name: Terragrunt Validate
+        id: validate
+        uses: gruntwork-io/terragrunt-action@main
+        with:
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.working_dir }}
+          tg_command: 'validate'
+            
+      - name: Terragrunt Apply
+        id: apply
+        uses: gruntwork-io/terragrunt-action@main
+        with:
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.working_dir }}
+          tg_command: 'apply'

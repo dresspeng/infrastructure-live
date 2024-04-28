@@ -1,37 +1,24 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/ubuntu
 {
-	// "initializeCommand": "export $(grep -v '^#' .devcontainer/devcontainer.env | xargs -0) && make aws-auth && aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com",
-	"name": "Alpine",
-	"build": {
-		"dockerfile": "../Dockerfile",
-		"args": {
-			"VARIANT": "mcr.microsoft.com/devcontainers/base:alpine-3.16"
-		},
-		"target": "runner"
-	},
-	"runArgs": [
-		"--env-file",
-		".devcontainer/devcontainer.env"
-	],
-	"mounts": [
-		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-	],
-	"postStartCommand": "export $(grep -v '^#' .devcontainer/devcontainer.env | xargs) && make aws-auth && tflint --init",
-	"features": {},
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"yzhang.markdown-all-in-one",
-				"shakram02.bash-beautify",
-				"hashicorp.terraform",
-				"bierner.markdown-emoji",
-				"ms-vscode.makefile-tools",
-				"github.vscode-github-actions",
-				"ms-azuretools.vscode-docker",
-				"redhat.vscode-yaml",
-				"IronGeek.vscode-env"
-			]
-		}
-	}
+    "build": {
+        "dockerfile": "./Dockerfile",
+        "args": {
+            "VARIANT": "mcr.microsoft.com/devcontainers/base:alpine-3.18"
+        }
+    },
+    "runArgs": [
+        "--env-file=.devcontainer/devcontainer.env"
+    ],
+    "postCreateCommand": "sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64; sudo chmod a+x /usr/local/bin/yq; yq --version",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "emeraldwalk.RunOnSave",
+                "yzhang.markdown-all-in-one",
+                "shd101wyy.markdown-preview-enhanced",
+                "hashicorp.terraform",
+                "GitHub.copilot",
+                "dbaeumer.vscode-eslint"
+            ]
+        }
+    }
 }
